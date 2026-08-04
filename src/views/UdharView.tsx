@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { UdharRecord, UdharType, UdharStatus, Language, UserProfile } from '../types';
+import { UdharRecord, UdharType, UdharStatus, Language, UserProfile, RepaymentLog } from '../types';
 import { getTranslation } from '../utils/translations';
 import { formatPKR, formatDatePK, getDaysRemainingOrOverdue } from '../utils/formatters';
 import {
@@ -27,6 +27,7 @@ interface UdharViewProps {
   onOpenRecordPayment: (record: UdharRecord) => void;
   onOpenWhatsAppReminder: (record: UdharRecord) => void;
   onOpenWhatsAppShare: (record: UdharRecord) => void;
+  onOpenReceipt?: (record: UdharRecord, payment: RepaymentLog) => void;
   onDeleteUdharRecord?: (recordId: string) => void;
   onDeletePayment?: (udharId: string, paymentId: string) => void;
   language: Language;
@@ -39,6 +40,7 @@ export const UdharView: React.FC<UdharViewProps> = ({
   onOpenRecordPayment,
   onOpenWhatsAppReminder,
   onOpenWhatsAppShare,
+  onOpenReceipt,
   onDeleteUdharRecord,
   onDeletePayment,
   language,
@@ -362,10 +364,21 @@ export const UdharView: React.FC<UdharViewProps> = ({
                               </span>
                             </div>
 
-                            <div className="flex items-center gap-2">
-                              <span className="font-extrabold text-emerald-700 dark:text-emerald-300">
+                             <div className="flex items-center gap-1.5">
+                              <span className="font-extrabold text-emerald-700 dark:text-emerald-300 mr-1">
                                 - {formatPKR(p.amount, profile.currency)}
                               </span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onOpenReceipt?.(record, p);
+                                }}
+                                className="p-1 rounded-lg text-emerald-600 hover:text-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-colors flex items-center gap-0.5 text-[10px] font-bold"
+                                title="View & Share Image Receipt"
+                              >
+                                <Receipt className="w-3.5 h-3.5" />
+                                <span>Receipt</span>
+                              </button>
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();

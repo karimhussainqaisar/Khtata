@@ -1,8 +1,9 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { UdharRecord, RepaymentLog, Language } from '../types';
 import { formatPKR, formatDatePK } from '../utils/formatters';
 import { generatePaymentReceiptMessage, getWhatsAppLink } from '../utils/whatsapp';
-import { X, Share2, Download, CheckCircle, ShieldCheck, Printer } from 'lucide-react';
+import { downloadReceiptImage, shareReceiptImage } from '../utils/receiptImage';
+import { X, Share2, Download, CheckCircle, ShieldCheck, Printer, Image as ImageIcon, Send } from 'lucide-react';
 
 interface DigitalReceiptModalProps {
   isOpen: boolean;
@@ -22,15 +23,26 @@ export const DigitalReceiptModal: React.FC<DigitalReceiptModalProps> = ({
   shopName,
 }) => {
   const receiptRef = useRef<HTMLDivElement>(null);
+  const [sharingImage, setSharingImage] = useState(false);
 
   if (!isOpen || !record || !payment) return null;
 
   const remaining = Math.max(0, record.amount - record.paidAmount);
 
-  const handleShareWhatsApp = () => {
+  const handleShareWhatsAppText = () => {
     const msg = generatePaymentReceiptMessage(record, payment, language);
     const link = getWhatsAppLink(record.phone, msg);
     window.open(link, '_blank');
+  };
+
+  const handleShareImage = async () => {
+    setSharingImage(true);
+    await shareReceiptImage(record, payment, shopName);
+    setSharingImage(false);
+  };
+
+  const handleDownloadImage = () => {
+    downloadReceiptImage(record, payment, shopName);
   };
 
   const handlePrint = () => {
@@ -119,19 +131,39 @@ export const DigitalReceiptModal: React.FC<DigitalReceiptModalProps> = ({
         </div>
 
         {/* Action Buttons */}
-        <div className="mt-4 grid grid-cols-2 gap-2">
+        <div className="mt-4 space-y-2">
+          {/* Primary Action: Share Image Receipt */}
           <button
-            onClick={handleShareWhatsApp}
-            className="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 flex items-center justify-center gap-1.5 transition-all active:scale-95"
+            onClick={handleShareImage}
+            disabled={sharingImage}
+            className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-60"
           >
-            <Share2 className="w-4 h-4" /> Share Receipt
+            <ImageIcon className="w-4 h-4" />
+            <span>{sharingImage ? 'Generating Image...' : 'Share Image Receipt (تصویر کے ساتھ شیئر کریں)'}</span>
           </button>
-          <button
-            onClick={handlePrint}
-            className="py-2.5 px-3 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center gap-1.5 transition-colors"
-          >
-            <Printer className="w-4 h-4" /> Print / Save
-          </button>
+
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              onClick={handleDownloadImage}
+              className="py-2 px-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-bold text-[11px] hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center gap-1 transition-colors"
+              title="Download Image File"
+            >
+              <Download className="w-3.5 h-3.5 text-indigo-500" /> Image PNG
+            </button>
+            <button
+              onClick={handleShareWhatsAppText}
+              className="py-2 px-2 rounded-xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-bold text-[11px] hover:bg-emerald-100 dark:hover:bg-emerald-900/50 flex items-center justify-center gap-1 transition-colors"
+              title="WhatsApp Text Statement"
+            >
+              <Send className="w-3.5 h-3.5" /> Text Msg
+            </button>
+            <button
+              onClick={handlePrint}
+              className="py-2 px-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-bold text-[11px] hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center gap-1 transition-colors"
+            >
+              <Printer className="w-3.5 h-3.5" /> Print
+            </button>
+          </div>
         </div>
       </div>
     </div>

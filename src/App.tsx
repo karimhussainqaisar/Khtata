@@ -275,6 +275,7 @@ export default function App() {
             onOpenRecordPayment={openRecordPayment}
             onOpenWhatsAppReminder={openWhatsAppReminder}
             onOpenWhatsAppShare={openWhatsAppShare}
+            onOpenReceipt={openReceipt}
             onDeleteUdharRecord={handleDeleteUdharRecord}
             onDeletePayment={handleDeletePayment}
             language={profile.language}
