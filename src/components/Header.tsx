@@ -1,6 +1,7 @@
 import React from 'react';
 import { UserProfile, Language } from '../types';
 import { getTranslation } from '../utils/translations';
+import { getThemePresetConfig } from '../utils/theme';
 import { Sparkles, Globe, Moon, Sun, Lock, ShieldCheck, Wallet } from 'lucide-react';
 
 interface HeaderProps {
@@ -18,6 +19,8 @@ export const Header: React.FC<HeaderProps> = ({
   onLockApp,
   overdueCount,
 }) => {
+  const theme = getThemePresetConfig(profile.themePreset);
+
   const toggleLanguage = () => {
     const nextLang: Language = profile.language === 'en' ? 'ur' : 'en';
     onUpdateProfile({ language: nextLang });
@@ -33,7 +36,7 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Brand & User Info */}
         <div className="flex items-center space-x-3 rtl:space-x-reverse">
           <div className="relative">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-indigo-700 flex items-center justify-center text-white shadow-md shadow-blue-500/20 font-bold text-xl tracking-wider overflow-hidden">
+            <div className={`w-10 h-10 rounded-xl bg-gradient-to-tr ${theme.gradientClass} flex items-center justify-center text-white shadow-md font-bold text-xl tracking-wider overflow-hidden`}>
               {profile.avatar ? (
                 <img src={profile.avatar} alt={profile.name} className="w-full h-full object-cover" />
               ) : (
@@ -49,7 +52,7 @@ export const Header: React.FC<HeaderProps> = ({
               <h1 className="font-extrabold text-slate-900 dark:text-white text-base leading-tight">
                 {profile.isShopkeeper && profile.shopName ? profile.shopName : getTranslation(profile.language, 'appName')}
               </h1>
-              <span className="px-2 py-0.5 text-[10px] font-bold bg-blue-50 dark:bg-blue-950/80 text-blue-600 dark:text-blue-400 rounded-lg border border-blue-200/60 dark:border-blue-800/60">
+              <span className={`px-2 py-0.5 text-[10px] font-bold ${theme.badgeBg} ${theme.badgeText} rounded-lg border border-slate-200/60 dark:border-slate-700/60`}>
                 PRO
               </span>
             </div>

@@ -1,6 +1,7 @@
 import React from 'react';
-import { Language } from '../types';
+import { Language, ThemePreset } from '../types';
 import { getTranslation } from '../utils/translations';
+import { getThemePresetConfig } from '../utils/theme';
 import { Home, BookOpen, Receipt, PieChart, User } from 'lucide-react';
 
 export type TabType = 'home' | 'udhar' | 'expenses' | 'reports' | 'profile';
@@ -10,6 +11,7 @@ interface BottomNavProps {
   onSelectTab: (tab: TabType) => void;
   language: Language;
   overdueCount: number;
+  themePreset?: ThemePreset;
 }
 
 export const BottomNav: React.FC<BottomNavProps> = ({
@@ -17,7 +19,10 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   onSelectTab,
   language,
   overdueCount,
+  themePreset,
 }) => {
+  const theme = getThemePresetConfig(themePreset);
+
   const tabs = [
     { id: 'home' as TabType, labelKey: 'navHome', icon: Home },
     { id: 'udhar' as TabType, labelKey: 'navUdhar', icon: BookOpen, badge: overdueCount > 0 ? overdueCount : undefined },
@@ -41,7 +46,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               onClick={() => onSelectTab(tab.id)}
               className={`relative flex flex-col items-center justify-center py-2 px-3 rounded-xl transition-all duration-200 ${
                 isActive
-                  ? 'text-blue-600 dark:text-blue-400 bg-blue-50/80 dark:bg-blue-950/50 font-bold scale-105'
+                  ? theme.activeTabClass
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 font-medium'
               }`}
             >

@@ -56,6 +56,8 @@ export interface Expense {
   voiceNoteUrl?: string;
 }
 
+export type ThemePreset = 'corporate_blue' | 'emerald_forest' | 'sunset_purple' | 'midnight_slate' | 'royal_gold';
+
 export interface UserProfile {
   name: string;
   shopName: string;
@@ -69,6 +71,7 @@ export interface UserProfile {
   isDarkMode: boolean;
   language: Language;
   monthlyBudget: number;
+  themePreset?: ThemePreset;
 }
 
 export interface ReminderTemplate {

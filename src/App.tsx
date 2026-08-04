@@ -330,6 +330,7 @@ export default function App() {
         onSelectTab={(tab) => setActiveTab(tab)}
         language={profile.language}
         overdueCount={summary.overdueCount}
+        themePreset={profile.themePreset}
       />
 
       {/* Modals & Drawers */}

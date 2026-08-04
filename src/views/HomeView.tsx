@@ -2,6 +2,7 @@ import React from 'react';
 import { UdharRecord, Expense, UserProfile, FinancialSummary, Language } from '../types';
 import { getTranslation } from '../utils/translations';
 import { formatPKR, formatDatePK, getDaysRemainingOrOverdue } from '../utils/formatters';
+import { getThemePresetConfig } from '../utils/theme';
 import {
   ArrowUpRight,
   ArrowDownLeft,
@@ -61,21 +62,22 @@ export const HomeView: React.FC<HomeViewProps> = ({
     .slice(0, 3);
 
   const recentExpenses = expenses.slice(0, 4);
+  const theme = getThemePresetConfig(profile.themePreset);
 
   return (
     <div className="space-y-5 pb-20">
       {/* Top Banner Greeting */}
-      <div className="p-6 rounded-3xl bg-gradient-to-br from-indigo-900 via-blue-900 to-indigo-950 text-white shadow-2xl relative overflow-hidden border border-indigo-700/40">
+      <div className={`p-6 rounded-3xl bg-gradient-to-br ${theme.heroBannerGradient} text-white shadow-2xl relative overflow-hidden`}>
         <div className="absolute top-0 right-0 -mr-16 -mt-16 w-40 h-40 bg-white/10 rounded-full blur-2xl pointer-events-none" />
         <div className="relative z-10 flex items-center justify-between">
           <div>
-            <span className="text-xs font-semibold uppercase tracking-wider text-blue-200">
+            <span className="text-xs font-semibold uppercase tracking-wider text-white/80">
               {profile.isShopkeeper ? 'Shopkeeper Dashboard' : 'Personal Khata'}
             </span>
             <h2 className="text-xl font-black mt-0.5">
               Assalam-o-Alaikum, {profile.name}! 👋
             </h2>
-            <p className="text-xs text-blue-200/90 mt-1">
+            <p className="text-xs text-white/80 mt-1">
               KhataPro smart digital notebook is active.
             </p>
           </div>

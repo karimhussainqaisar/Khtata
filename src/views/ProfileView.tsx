@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { UserProfile, Language } from '../types';
+import { UserProfile, Language, ThemePreset } from '../types';
 import { getTranslation } from '../utils/translations';
 import { resetToDemoData } from '../utils/storage';
-import { User, Store, Lock, Globe, Moon, Sun, RefreshCw, ShieldCheck, Check, Phone, DollarSign, Fingerprint, Camera, Upload, Image as ImageIcon } from 'lucide-react';
+import { THEME_PRESETS, getThemePresetConfig } from '../utils/theme';
+import { User, Store, Lock, Globe, Moon, Sun, RefreshCw, ShieldCheck, Check, Phone, DollarSign, Fingerprint, Camera, Upload, Image as ImageIcon, Palette, Sparkles } from 'lucide-react';
 
 interface ProfileViewProps {
   profile: UserProfile;
@@ -35,6 +36,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [biometricEnabled, setBiometricEnabled] = useState(profile.biometricEnabled ?? true);
   const [currency, setCurrency] = useState(profile.currency || 'Rs.');
   const [budget, setBudget] = useState(profile.monthlyBudget.toString());
+  const [themePreset, setThemePreset] = useState<ThemePreset>(profile.themePreset || 'corporate_blue');
   const [saved, setSaved] = useState(false);
 
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -63,10 +65,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       biometricEnabled,
       currency,
       monthlyBudget: parseFloat(budget) || 85000,
+      themePreset,
     });
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
+
+  const currentTheme = getThemePresetConfig(themePreset);
 
   return (
     <div className="space-y-4 pb-20">
@@ -85,7 +90,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         <div className="p-5 rounded-3xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 shadow-sm space-y-4">
           <div className="flex items-center space-x-3 rtl:space-x-reverse">
             <div className="relative group">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white flex items-center justify-center font-black text-xl shadow-md overflow-hidden border-2 border-indigo-200 dark:border-indigo-800">
+              <div className={`w-16 h-16 rounded-2xl bg-gradient-to-tr ${currentTheme.gradientClass} text-white flex items-center justify-center font-black text-xl shadow-md overflow-hidden border-2 border-indigo-200 dark:border-indigo-800`}>
                 {avatar ? (
                   <img src={avatar} alt={name} className="w-full h-full object-cover" />
                 ) : (
@@ -206,6 +211,70 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </div>
         </div>
 
+        {/* Theme Settings Section Card */}
+        <div className="p-5 rounded-3xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 shadow-sm space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Palette className="w-4 h-4 text-indigo-500" /> Theme Settings (تھیم کی ترتیبات)
+              </h3>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                Select custom gradient theme preset for headers, avatars & highlights
+              </p>
+            </div>
+            <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${currentTheme.badgeBg} ${currentTheme.badgeText}`}>
+              {currentTheme.nameEn}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+            {THEME_PRESETS.map((preset) => {
+              const isSelected = themePreset === preset.id;
+              return (
+                <button
+                  key={preset.id}
+                  type="button"
+                  onClick={() => {
+                    setThemePreset(preset.id);
+                    onUpdateProfile({ themePreset: preset.id });
+                  }}
+                  className={`p-3 rounded-2xl border text-left transition-all flex items-center justify-between group ${
+                    isSelected
+                      ? 'border-indigo-600 dark:border-indigo-500 bg-indigo-50/70 dark:bg-indigo-950/40 shadow-sm'
+                      : 'border-slate-200 dark:border-slate-700/70 hover:border-slate-300 dark:hover:border-slate-600 bg-slate-50/50 dark:bg-slate-900/50'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3 rtl:space-x-reverse">
+                    {/* Gradient Swatch Circle */}
+                    <div
+                      className={`w-10 h-10 rounded-xl bg-gradient-to-tr ${preset.gradientClass} shadow-md flex items-center justify-center text-white flex-shrink-0`}
+                    >
+                      <Sparkles className="w-4 h-4 text-white/90" />
+                    </div>
+
+                    <div>
+                      <div className="text-xs font-bold text-slate-900 dark:text-white leading-snug">
+                        {preset.nameEn}
+                      </div>
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+                        {preset.nameUr}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${
+                    isSelected
+                      ? 'bg-indigo-600 text-white scale-110'
+                      : 'border border-slate-300 dark:border-slate-600 text-transparent'
+                  }`}>
+                    <Check className="w-3.5 h-3.5" />
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Security & Currency Card */}
         <div className="p-5 rounded-3xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 shadow-sm space-y-4">
           <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
@@ -300,7 +369,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         {/* Save Button */}
         <button
           type="submit"
-          className="w-full py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-md shadow-indigo-600/20 flex items-center justify-center gap-2 transition-all active:scale-98"
+          className={`w-full py-3.5 rounded-2xl font-bold text-sm shadow-md flex items-center justify-center gap-2 transition-all active:scale-98 ${currentTheme.primaryBtnClass}`}
         >
           {saved ? (
             <>

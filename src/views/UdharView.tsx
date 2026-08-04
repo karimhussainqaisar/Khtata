@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { UdharRecord, UdharType, UdharStatus, Language, UserProfile, RepaymentLog } from '../types';
 import { getTranslation } from '../utils/translations';
 import { formatPKR, formatDatePK, getDaysRemainingOrOverdue } from '../utils/formatters';
+import { getThemePresetConfig } from '../utils/theme';
 import { CustomerPdfModal } from '../components/CustomerPdfModal';
 import {
   Search,
@@ -58,6 +59,7 @@ export const UdharView: React.FC<UdharViewProps> = ({
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [deletePaymentConfirm, setDeletePaymentConfirm] = useState<{ udharId: string; paymentId: string } | null>(null);
   const [selectedPdfRecord, setSelectedPdfRecord] = useState<UdharRecord | null>(null);
+  const theme = getThemePresetConfig(profile.themePreset);
 
   const filteredRecords = udharRecords.filter((r) => {
     if (r.type !== activeType) return false;
@@ -99,7 +101,7 @@ export const UdharView: React.FC<UdharViewProps> = ({
         </div>
         <button
           onClick={() => onOpenAddUdhar(activeType)}
-          className="px-3.5 py-2 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-600/20 flex items-center gap-1.5 transition-all active:scale-95"
+          className={`px-3.5 py-2 rounded-2xl font-bold text-xs shadow-md flex items-center gap-1.5 transition-all active:scale-95 ${theme.primaryBtnClass}`}
         >
           <Plus className="w-4 h-4" /> Add Record
         </button>

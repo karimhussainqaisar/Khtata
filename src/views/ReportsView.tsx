@@ -2,6 +2,7 @@ import React from 'react';
 import { UdharRecord, Expense, UserProfile, FinancialSummary, Language } from '../types';
 import { getTranslation } from '../utils/translations';
 import { formatPKR } from '../utils/formatters';
+import { getThemePresetConfig } from '../utils/theme';
 import { Download, PieChart, TrendingUp, Sparkles, ShieldCheck, ArrowUpRight, CheckCircle } from 'lucide-react';
 
 interface ReportsViewProps {
@@ -44,6 +45,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
     .reduce((acc, r) => acc + r.paidAmount, 0);
 
   const recoveryRate = totalGivenAmount > 0 ? Math.round((totalCollectedAmount / totalGivenAmount) * 100) : 100;
+  const theme = getThemePresetConfig(profile.themePreset);
 
   return (
     <div className="space-y-4 pb-20">
@@ -60,7 +62,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
 
         <button
           onClick={onOpenExportModal}
-          className="px-3.5 py-2 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-xs shadow-md shadow-indigo-600/20 flex items-center gap-1.5 transition-all active:scale-95"
+          className={`px-3.5 py-2 rounded-2xl font-bold text-xs shadow-md flex items-center gap-1.5 transition-all active:scale-95 ${theme.primaryBtnClass}`}
         >
           <Download className="w-4 h-4" /> Export Report
         </button>

@@ -13,6 +13,7 @@ export const initialProfile: UserProfile = {
   isDarkMode: false,
   language: 'en',
   monthlyBudget: 85000,
+  themePreset: 'corporate_blue',
 };
 
 export const initialUdharRecords: UdharRecord[] = [
