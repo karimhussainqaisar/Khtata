@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { User, onAuthStateChanged } from 'firebase/auth';
 import {
   UserProfile,
   UdharRecord,
@@ -17,6 +18,21 @@ import {
   calculateSummary,
   resetToDemoData,
 } from './utils/storage';
+import {
+  auth,
+  signInWithGoogle,
+  logOutUser,
+  checkRedirectResult,
+  listenToUserUdhar,
+  listenToUserExpenses,
+  listenToUserProfile,
+  saveUdharRecordToCloud,
+  deleteUdharRecordFromCloud,
+  saveExpenseToCloud,
+  deleteExpenseFromCloud,
+  saveProfileToCloud,
+  syncLocalDataToCloud,
+} from './lib/firebase';
 import { Header } from './components/Header';
 import { BottomNav, TabType } from './components/BottomNav';
 import { AddUdharModal } from './components/AddUdharModal';
@@ -40,6 +56,10 @@ export default function App() {
   const [profile, setProfile] = useState<UserProfile>(loadProfile);
   const [udharRecords, setUdharRecords] = useState<UdharRecord[]>(loadUdharRecords);
   const [expenses, setExpenses] = useState<Expense[]>(loadExpenses);
+
+  // Firebase Google Auth State
+  const [authUser, setAuthUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState<boolean>(true);
 
   const [activeTab, setActiveTab] = useState<TabType>('home');
   const [isLocked, setIsLocked] = useState<boolean>(profile.pinEnabled);
@@ -66,6 +86,68 @@ export default function App() {
   const [isScanOpen, setIsScanOpen] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
 
+  // Check for redirect result on boot (for mobile/popup blocked fallbacks)
+  useEffect(() => {
+    checkRedirectResult();
+  }, []);
+
+  // Subscribe to Firebase Auth State Changes
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setAuthUser(currentUser);
+      setAuthLoading(false);
+      if (currentUser?.displayName && !profile.name) {
+        setProfile((prev) => ({ ...prev, name: currentUser.displayName || prev.name }));
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Real-time Firestore Sync when Google user is logged in
+  useEffect(() => {
+    if (!authUser) return;
+
+    let initialUdharSynced = false;
+    let initialExpensesSynced = false;
+
+    // Listen to Udhar Records
+    const unsubUdhar = listenToUserUdhar(authUser.uid, (cloudUdhar) => {
+      if (cloudUdhar.length > 0) {
+        setUdharRecords(cloudUdhar);
+      } else if (!initialUdharSynced && udharRecords.length > 0) {
+        // Upload initial local records if cloud is empty
+        udharRecords.forEach((r) => saveUdharRecordToCloud(authUser.uid, r));
+      }
+      initialUdharSynced = true;
+    });
+
+    // Listen to Expenses
+    const unsubExpenses = listenToUserExpenses(authUser.uid, (cloudExpenses) => {
+      if (cloudExpenses.length > 0) {
+        setExpenses(cloudExpenses);
+      } else if (!initialExpensesSynced && expenses.length > 0) {
+        // Upload initial local expenses if cloud is empty
+        expenses.forEach((e) => saveExpenseToCloud(authUser.uid, e));
+      }
+      initialExpensesSynced = true;
+    });
+
+    // Listen to Profile
+    const unsubProfile = listenToUserProfile(authUser.uid, (cloudProfile) => {
+      if (Object.keys(cloudProfile).length > 0) {
+        setProfile((prev) => ({ ...prev, ...cloudProfile }));
+      } else {
+        saveProfileToCloud(authUser.uid, profile);
+      }
+    });
+
+    return () => {
+      unsubUdhar();
+      unsubExpenses();
+      unsubProfile();
+    };
+  }, [authUser?.uid]);
+
   // Sync state changes to localStorage
   useEffect(() => {
     saveProfile(profile);
@@ -86,14 +168,50 @@ export default function App() {
 
   const summary = calculateSummary(udharRecords, expenses);
 
+  // Google Login & Logout Handlers
+  const handleGoogleLogin = async () => {
+    try {
+      setAuthLoading(true);
+      await signInWithGoogle();
+    } catch (err) {
+      console.error('Failed to log in with Google:', err);
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleGoogleLogout = async () => {
+    try {
+      setAuthLoading(true);
+      await logOutUser();
+    } catch (err) {
+      console.error('Failed to logout:', err);
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
   // Handlers
   const handleUpdateProfile = (updated: Partial<UserProfile>) => {
-    setProfile((prev) => ({ ...prev, ...updated }));
+    setProfile((prev) => {
+      const next = { ...prev, ...updated };
+      if (authUser) {
+        saveProfileToCloud(authUser.uid, next);
+      }
+      return next;
+    });
   };
 
   const handleUpdateUdharRecord = (recordId: string, updated: Partial<UdharRecord>) => {
     setUdharRecords((prev) =>
-      prev.map((r) => (r.id === recordId ? { ...r, ...updated } : r))
+      prev.map((r) => {
+        if (r.id === recordId) {
+          const next = { ...r, ...updated };
+          if (authUser) saveUdharRecordToCloud(authUser.uid, next);
+          return next;
+        }
+        return r;
+      })
     );
   };
 
@@ -108,6 +226,9 @@ export default function App() {
     };
 
     setUdharRecords((prev) => [newRecord, ...prev]);
+    if (authUser) {
+      saveUdharRecordToCloud(authUser.uid, newRecord);
+    }
   };
 
   const handleAddExpense = (newExpenseData: Omit<Expense, 'id'>) => {
@@ -116,6 +237,9 @@ export default function App() {
       id: `e-${Date.now()}`,
     };
     setExpenses((prev) => [newExpense, ...prev]);
+    if (authUser) {
+      saveExpenseToCloud(authUser.uid, newExpense);
+    }
   };
 
   const handleSavePayment = (udharId: string, paymentData: Omit<RepaymentLog, 'id' | 'udharId'>) => {
@@ -125,6 +249,8 @@ export default function App() {
       id: paymentId,
       udharId,
     };
+
+    let updatedRecord: UdharRecord | null = null;
 
     setUdharRecords((prev) =>
       prev.map((r) => {
@@ -137,14 +263,19 @@ export default function App() {
         } else if (newPaidAmount > 0) {
           status = 'partially_paid';
         }
-        return {
+        updatedRecord = {
           ...r,
           paidAmount: newPaidAmount,
           status,
           payments: [...r.payments, newPayment],
         };
+        return updatedRecord;
       })
     );
+
+    if (authUser && updatedRecord) {
+      saveUdharRecordToCloud(authUser.uid, updatedRecord);
+    }
 
     // Add repayment as positive cashflow income/expense log automatically
     handleAddExpense({
@@ -159,9 +290,13 @@ export default function App() {
 
   const handleDeleteUdharRecord = (udharId: string) => {
     setUdharRecords((prev) => prev.filter((r) => r.id !== udharId));
+    if (authUser) {
+      deleteUdharRecordFromCloud(udharId);
+    }
   };
 
   const handleDeletePayment = (udharId: string, paymentId: string) => {
+    let updatedRecord: UdharRecord | null = null;
     setUdharRecords((prev) =>
       prev.map((r) => {
         if (r.id !== udharId) return r;
@@ -186,18 +321,26 @@ export default function App() {
           status = 'pending';
         }
 
-        return {
+        updatedRecord = {
           ...r,
           paidAmount: newPaidAmount,
           status,
           payments: updatedPayments,
         };
+        return updatedRecord;
       })
     );
+
+    if (authUser && updatedRecord) {
+      saveUdharRecordToCloud(authUser.uid, updatedRecord);
+    }
   };
 
   const handleDeleteExpense = (expenseId: string) => {
     setExpenses((prev) => prev.filter((e) => e.id !== expenseId));
+    if (authUser) {
+      deleteExpenseFromCloud(expenseId);
+    }
   };
 
   const handleResetDemo = () => {
@@ -205,6 +348,9 @@ export default function App() {
     setProfile(res.profile);
     setUdharRecords(res.udhar);
     setExpenses(res.expenses);
+    if (authUser) {
+      syncLocalDataToCloud(authUser.uid, res.udhar, res.expenses, res.profile);
+    }
   };
 
   // Open triggers
@@ -248,6 +394,10 @@ export default function App() {
       {/* Header */}
       <Header
         profile={profile}
+        user={authUser}
+        authLoading={authLoading}
+        onLogin={handleGoogleLogin}
+        onLogout={handleGoogleLogout}
         onUpdateProfile={handleUpdateProfile}
         onOpenKhataAi={() => setIsKhataAiOpen(true)}
         onLockApp={() => setIsLocked(true)}
@@ -317,6 +467,10 @@ export default function App() {
         {activeTab === 'profile' && (
           <ProfileView
             profile={profile}
+            user={authUser}
+            authLoading={authLoading}
+            onLogin={handleGoogleLogin}
+            onLogout={handleGoogleLogout}
             onUpdateProfile={handleUpdateProfile}
             onResetDemo={handleResetDemo}
             language={profile.language}
@@ -413,3 +567,4 @@ export default function App() {
     </div>
   );
 }
+

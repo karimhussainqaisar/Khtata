@@ -24,14 +24,22 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
   language,
   onOpenReceipt,
 }) => {
-  if (!isOpen || !record) return null;
+  const remaining = record ? Math.max(0, record.amount - record.paidAmount) : 0;
+  const isGiven = record?.type === 'given';
 
-  const isGiven = record.type === 'given';
-  const remaining = Math.max(0, record.amount - record.paidAmount);
-  const [amount, setAmount] = useState<string>(remaining.toString());
+  const [amount, setAmount] = useState<string>('0');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('JazzCash');
   const [notes, setNotes] = useState('');
   const [txId, setTxId] = useState(() => `KP-${Math.floor(100000 + Math.random() * 900000)}`);
+
+  // Sync default amount when modal opens or record changes
+  React.useEffect(() => {
+    if (record) {
+      setAmount(Math.max(0, record.amount - record.paidAmount).toString());
+    }
+  }, [record, isOpen]);
+
+  if (!isOpen || !record) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

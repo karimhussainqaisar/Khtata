@@ -19,20 +19,21 @@ export const WhatsAppShareModal: React.FC<WhatsAppShareModalProps> = ({
   mode,
   language,
 }) => {
-  if (!isOpen || !record) return null;
-
   const [msgLang, setMsgLang] = useState<Language>(language);
   const [timing, setTiming] = useState<'before_due' | 'on_due' | 'overdue'>('on_due');
   const [customText, setCustomText] = useState('');
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
+    if (!record) return;
     if (mode === 'statement') {
       setCustomText(generateUdharShareMessage(record, msgLang));
     } else {
       setCustomText(generateReminderMessage(record, timing, msgLang));
     }
   }, [record, mode, msgLang, timing]);
+
+  if (!isOpen || !record) return null;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(customText);

@@ -1,12 +1,19 @@
 import React, { useState } from 'react';
+import { User } from 'firebase/auth';
 import { UserProfile, Language, ThemePreset } from '../types';
 import { getTranslation } from '../utils/translations';
-import { resetToDemoData } from '../utils/storage';
-import { THEME_PRESETS, getThemePresetConfig } from '../utils/theme';
-import { User, Store, Lock, Globe, Moon, Sun, RefreshCw, ShieldCheck, Check, Phone, DollarSign, Fingerprint, Camera, Upload, Image as ImageIcon, Palette, Sparkles } from 'lucide-react';
+import { getThemePresetConfig, THEME_PRESETS } from '../utils/theme';
+import { GoogleAuthBanner } from '../components/GoogleAuthBanner';
+import { User as UserIcon, Store, Lock, Globe, Moon, Sun, RefreshCw, ShieldCheck, Check, Phone, DollarSign, Fingerprint, Camera, Upload, Palette, Sparkles } from 'lucide-react';
+
+import { compressImage } from '../utils/imageCompressor';
 
 interface ProfileViewProps {
   profile: UserProfile;
+  user: User | null;
+  authLoading: boolean;
+  onLogin: () => void;
+  onLogout: () => void;
   onUpdateProfile: (updated: Partial<UserProfile>) => void;
   onResetDemo: () => void;
   language: Language;
@@ -22,6 +29,10 @@ const PRESET_AVATARS = [
 
 export const ProfileView: React.FC<ProfileViewProps> = ({
   profile,
+  user,
+  authLoading,
+  onLogin,
+  onLogout,
   onUpdateProfile,
   onResetDemo,
   language,
@@ -39,16 +50,21 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [themePreset, setThemePreset] = useState<ThemePreset>(profile.themePreset || 'corporate_blue');
   const [saved, setSaved] = useState(false);
 
-  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          setAvatar(event.target.result as string);
-        }
-      };
-      reader.readAsDataURL(file);
+      try {
+        const compressed = await compressImage(file, 250, 250, 0.7);
+        setAvatar(compressed);
+      } catch {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          if (event.target?.result) {
+            setAvatar(event.target.result as string);
+          }
+        };
+        reader.readAsDataURL(file);
+      }
     }
   };
 
@@ -84,6 +100,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           Account settings, PIN lock & Pakistani preferences
         </p>
       </div>
+
+      {/* Google Authentication & Firestore Data Sync Card */}
+      <GoogleAuthBanner
+        user={user}
+        loading={authLoading}
+        onLogin={onLogin}
+        onLogout={onLogout}
+        language={language}
+      />
 
       <form onSubmit={handleSaveProfile} className="space-y-4">
         {/* Profile Info Card */}

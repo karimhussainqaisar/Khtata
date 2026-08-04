@@ -60,6 +60,8 @@ export const UdharView: React.FC<UdharViewProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [dateRange, setDateRange] = useState<'all' | 'today' | 'week' | 'month'>('all');
+  const [viewMode, setViewMode] = useState<'customer' | 'individual'>('customer');
+  const [expandedCustomerId, setExpandedCustomerId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [deletePaymentConfirm, setDeletePaymentConfirm] = useState<{ udharId: string; paymentId: string } | null>(null);
@@ -114,6 +116,55 @@ export const UdharView: React.FC<UdharViewProps> = ({
 
     return true;
   });
+
+  // Group filtered records by Customer (Person Name)
+  interface CustomerGroup {
+    personName: string;
+    phone: string;
+    profilePhoto?: string;
+    records: UdharRecord[];
+    totalAmount: number;
+    totalPaidAmount: number;
+    totalRemaining: number;
+    hasOverdue: boolean;
+  }
+
+  const customerGroups: CustomerGroup[] = React.useMemo(() => {
+    const map = new Map<string, CustomerGroup>();
+
+    filteredRecords.forEach((record) => {
+      const key = record.personName.trim().toLowerCase();
+      const remaining = Math.max(0, record.amount - record.paidAmount);
+      const existing = map.get(key);
+
+      if (existing) {
+        existing.records.push(record);
+        existing.totalAmount += record.amount;
+        existing.totalPaidAmount += record.paidAmount;
+        existing.totalRemaining += remaining;
+        if (record.status === 'overdue') existing.hasOverdue = true;
+        if (!existing.profilePhoto && record.profilePhoto) {
+          existing.profilePhoto = record.profilePhoto;
+        }
+        if (record.phone && (!existing.phone || existing.phone === 'N/A')) {
+          existing.phone = record.phone;
+        }
+      } else {
+        map.set(key, {
+          personName: record.personName,
+          phone: record.phone || 'N/A',
+          profilePhoto: record.profilePhoto,
+          records: [record],
+          totalAmount: record.amount,
+          totalPaidAmount: record.paidAmount,
+          totalRemaining: remaining,
+          hasOverdue: record.status === 'overdue',
+        });
+      }
+    });
+
+    return Array.from(map.values());
+  }, [filteredRecords]);
 
   const totalGiven = udharRecords.filter((r) => r.type === 'given').reduce((acc, r) => acc + (r.amount - r.paidAmount), 0);
   const totalTaken = udharRecords.filter((r) => r.type === 'taken').reduce((acc, r) => acc + (r.amount - r.paidAmount), 0);
@@ -270,7 +321,45 @@ export const UdharView: React.FC<UdharViewProps> = ({
         </div>
       </div>
 
-      {/* Record List */}
+      {/* View Mode Switcher: Combined by Customer vs Single Entries */}
+      <div className="flex items-center justify-between px-1 pt-1">
+        <div className="flex bg-slate-200/80 dark:bg-slate-800 p-1 rounded-xl text-xs font-bold">
+          <button
+            onClick={() => setViewMode('customer')}
+            className={`px-3 py-1.5 rounded-lg transition-all text-xs font-bold flex items-center gap-1.5 ${
+              viewMode === 'customer'
+                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+            }`}
+          >
+            <span>Combined by Customer</span>
+            <span className="px-1.5 py-0.2 text-[10px] bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 rounded-full font-mono">
+              {customerGroups.length}
+            </span>
+          </button>
+          <button
+            onClick={() => setViewMode('individual')}
+            className={`px-3 py-1.5 rounded-lg transition-all text-xs font-bold flex items-center gap-1.5 ${
+              viewMode === 'individual'
+                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+            }`}
+          >
+            <span>Single Entries</span>
+            <span className="px-1.5 py-0.2 text-[10px] bg-slate-300 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-full font-mono">
+              {filteredRecords.length}
+            </span>
+          </button>
+        </div>
+
+        <span className="text-[11px] text-slate-400 font-medium hidden sm:inline">
+          {viewMode === 'customer'
+            ? 'All transactions combined per customer'
+            : 'Line-by-line entry view'}
+        </span>
+      </div>
+
+      {/* Record List / Customer Groups List */}
       <div className="space-y-3">
         {filteredRecords.length === 0 ? (
           <div className="p-8 text-center bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 space-y-3">
@@ -290,7 +379,311 @@ export const UdharView: React.FC<UdharViewProps> = ({
               </button>
             )}
           </div>
+        ) : viewMode === 'customer' ? (
+          /* COMBINED BY CUSTOMER VIEW */
+          customerGroups.map((group) => {
+            const isCustomerExpanded = expandedCustomerId === group.personName;
+            const pendingRecord = group.records.find((r) => r.paidAmount < r.amount) || group.records[0];
+
+            return (
+              <div
+                key={group.personName}
+                className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/80 dark:border-slate-700/80 shadow-sm overflow-hidden transition-all"
+              >
+                {/* Customer Consolidated Card Header */}
+                <div
+                  onClick={() => setExpandedCustomerId(isCustomerExpanded ? null : group.personName)}
+                  className="p-4 cursor-pointer hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center space-x-3 rtl:space-x-reverse">
+                      {/* Customer Avatar Photo */}
+                      <div className="w-12 h-12 rounded-2xl bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 flex items-center justify-center font-black text-base overflow-hidden border border-indigo-200 dark:border-indigo-800 shadow-xs flex-shrink-0">
+                        {group.profilePhoto ? (
+                          <img src={group.profilePhoto} alt={group.personName} className="w-full h-full object-cover" />
+                        ) : (
+                          group.personName.substring(0, 2).toUpperCase()
+                        )}
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                          {group.personName}
+                        </h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                          <Phone className="w-3 h-3" /> {group.phone}
+                        </p>
+                        <span className="inline-block mt-0.5 px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400">
+                          {group.records.length} {group.records.length === 1 ? 'Transaction' : 'Combined Transactions'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="text-right">
+                      <span className="text-xs text-slate-400 block font-medium">Net Remaining Udhar</span>
+                      <div
+                        className={`text-base font-black ${
+                          group.totalRemaining === 0
+                            ? 'text-emerald-600 dark:text-emerald-400'
+                            : activeType === 'given'
+                            ? 'text-emerald-600 dark:text-emerald-400'
+                            : 'text-rose-600 dark:text-rose-400'
+                        }`}
+                      >
+                        {formatPKR(group.totalRemaining, profile.currency)}
+                      </div>
+                      <span className="text-[10px] text-slate-400 block mt-0.5">
+                        Total: {formatPKR(group.totalAmount, profile.currency)} • Paid: {formatPKR(group.totalPaidAmount, profile.currency)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Customer Badges & Combined Action Bar */}
+                  <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between">
+                    <div className="flex items-center space-x-1.5 rtl:space-x-reverse">
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          group.totalRemaining === 0
+                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                            : group.hasOverdue
+                            ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                            : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                        }`}
+                      >
+                        {group.totalRemaining === 0
+                          ? 'Settled'
+                          : group.hasOverdue
+                          ? 'Overdue Entries'
+                          : 'Pending Udhar'}
+                      </span>
+                    </div>
+
+                    {/* Quick Customer Action Buttons */}
+                    <div className="flex items-center space-x-1.5 rtl:space-x-reverse" onClick={(e) => e.stopPropagation()}>
+                      {/* PDF Export for Customer */}
+                      {pendingRecord && (
+                        <button
+                          onClick={() => setSelectedPdfRecord(pendingRecord)}
+                          className="p-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 text-xs flex items-center gap-1 font-semibold"
+                          title="Export Customer PDF Statement"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          <span className="hidden sm:inline text-[11px]">PDF</span>
+                        </button>
+                      )}
+
+                      {/* WhatsApp Reminder for Customer */}
+                      {group.totalRemaining > 0 && pendingRecord && (
+                        <button
+                          onClick={() => onOpenWhatsAppReminder(pendingRecord)}
+                          className="p-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 text-xs flex items-center gap-1 font-semibold"
+                          title="WhatsApp Reminder"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+
+                      {/* Quick Record Payment */}
+                      {group.totalRemaining > 0 && pendingRecord && (
+                        <button
+                          onClick={() => onOpenRecordPayment(pendingRecord)}
+                          className={`px-2.5 py-1 rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95 ${
+                            activeType === 'given'
+                              ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                              : 'bg-rose-600 hover:bg-rose-700 text-white'
+                          }`}
+                        >
+                          {activeType === 'given' ? 'Pay / Receive' : 'Pay Back'}
+                        </button>
+                      )}
+
+                      <div className="text-slate-400 pl-1 flex items-center gap-1 text-xs font-bold text-indigo-600 dark:text-indigo-400">
+                        <span>{isCustomerExpanded ? 'Hide Transactions' : 'View All'}</span>
+                        {isCustomerExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* EXPANDED CUSTOMER TRANSACTIONS DRAWER */}
+                {isCustomerExpanded && (
+                  <div className="p-4 bg-slate-50 dark:bg-slate-900/90 border-t border-slate-200 dark:border-slate-700 space-y-3 animate-in fade-in">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                        <Receipt className="w-4 h-4 text-indigo-500" /> Transactions for {group.personName} ({group.records.length})
+                      </h4>
+                      <button
+                        onClick={() => onOpenAddUdhar(activeType)}
+                        className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+                      >
+                        <Plus className="w-3 h-3" /> Add Entry for Customer
+                      </button>
+                    </div>
+
+                    <div className="space-y-2.5">
+                      {group.records.map((record) => {
+                        const recRemaining = Math.max(0, record.amount - record.paidAmount);
+                        const isRecordExpanded = expandedId === record.id;
+                        const dueInfo = getDaysRemainingOrOverdue(record.dueDate);
+
+                        return (
+                          <div
+                            key={record.id}
+                            className="p-3 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xs space-y-2"
+                          >
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold text-xs text-slate-900 dark:text-white">
+                                    {record.purpose || 'General Entry'}
+                                  </span>
+                                  <span
+                                    className={`text-[9px] font-extrabold px-1.5 py-0.2 rounded ${
+                                      record.status === 'fully_paid'
+                                        ? 'bg-emerald-100 text-emerald-800'
+                                        : record.status === 'overdue'
+                                        ? 'bg-rose-100 text-rose-800'
+                                        : 'bg-amber-100 text-amber-800'
+                                    }`}
+                                  >
+                                    {getTranslation(language, record.status as any)}
+                                  </span>
+                                </div>
+                                <p className="text-[10px] text-slate-400 mt-0.5">
+                                  Date: {formatDatePK(record.date)} {recRemaining > 0 && `• ${dueInfo.label}`}
+                                </p>
+                              </div>
+
+                              <div className="text-right">
+                                <span className="text-xs font-black text-slate-900 dark:text-white">
+                                  {formatPKR(record.amount, profile.currency)}
+                                </span>
+                                {recRemaining > 0 && (
+                                  <span className="text-[10px] font-bold text-rose-600 block">
+                                    Rem: {formatPKR(recRemaining, profile.currency)}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Sub-actions per entry */}
+                            <div className="pt-2 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-xs">
+                              <button
+                                onClick={() => setExpandedId(isRecordExpanded ? null : record.id)}
+                                className="text-[11px] font-bold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 flex items-center gap-1"
+                              >
+                                {isRecordExpanded ? 'Hide Details' : `Payment History (${record.payments.length})`}
+                                {isRecordExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                              </button>
+
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  onClick={() => setSelectedPdfRecord(record)}
+                                  className="p-1 text-slate-400 hover:text-indigo-600"
+                                  title="Export PDF"
+                                >
+                                  <Download className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => onOpenWhatsAppShare(record)}
+                                  className="p-1 text-slate-400 hover:text-emerald-600"
+                                  title="Share WhatsApp"
+                                >
+                                  <Share2 className="w-3.5 h-3.5" />
+                                </button>
+                                {recRemaining > 0 && (
+                                  <button
+                                    onClick={() => onOpenRecordPayment(record)}
+                                    className="px-2 py-0.5 rounded-lg bg-emerald-600 text-white font-bold text-[10px]"
+                                  >
+                                    Pay
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => setDeleteConfirmId(deleteConfirmId === record.id ? null : record.id)}
+                                  className="p-1 text-slate-400 hover:text-rose-600"
+                                  title="Delete Record"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Record Delete Confirmation */}
+                            {deleteConfirmId === record.id && (
+                              <div className="p-2 bg-rose-50 dark:bg-rose-950/90 rounded-xl border border-rose-200 flex items-center justify-between text-xs font-semibold text-rose-900 dark:text-rose-200">
+                                <span>Delete this entry?</span>
+                                <div className="flex gap-1.5">
+                                  <button
+                                    onClick={() => setDeleteConfirmId(null)}
+                                    className="px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 text-[10px]"
+                                  >
+                                    Cancel
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      onDeleteUdharRecord?.(record.id);
+                                      setDeleteConfirmId(null);
+                                    }}
+                                    className="px-2 py-0.5 rounded bg-rose-600 text-white text-[10px]"
+                                  >
+                                    Confirm
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Detailed Payment Timeline */}
+                            {isRecordExpanded && (
+                              <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl space-y-2 mt-2">
+                                <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400 block">
+                                  Repayment Logs:
+                                </span>
+                                {record.payments.length === 0 ? (
+                                  <p className="text-[10px] text-slate-400 italic">No payment logs recorded yet.</p>
+                                ) : (
+                                  record.payments.map((p) => (
+                                    <div
+                                      key={p.id}
+                                      className="p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[11px] flex items-center justify-between"
+                                    >
+                                      <div>
+                                        <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                                          - {formatPKR(p.amount, profile.currency)}
+                                        </span>
+                                        <span className="text-[10px] text-slate-400 block">
+                                          {formatDatePK(p.date)} via {p.paymentMethod}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center gap-1">
+                                        <button
+                                          onClick={() => onOpenReceipt?.(record, p)}
+                                          className="px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold flex items-center gap-1"
+                                        >
+                                          <Receipt className="w-3 h-3" /> Receipt
+                                        </button>
+                                        <button
+                                          onClick={() => onDeletePayment?.(record.id, p.id)}
+                                          className="p-1 text-slate-400 hover:text-rose-600"
+                                        >
+                                          <Trash2 className="w-3 h-3" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ))
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })
         ) : (
+          /* INDIVIDUAL ENTRY VIEW (Flat List) */
           filteredRecords.map((record) => {
             const remaining = Math.max(0, record.amount - record.paidAmount);
             const isExpanded = expandedId === record.id;

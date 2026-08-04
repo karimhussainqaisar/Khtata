@@ -1,0 +1,53 @@
+{
+  "entities": {
+    "udharRecords": {
+      "title": "Udhar Record",
+      "description": "Customer credit and debit records",
+      "properties": {
+        "id": { "type": "string", "description": "Unique record ID" },
+        "userId": { "type": "string", "description": "Owner user UID" },
+        "type": { "type": "string", "description": "given or taken" },
+        "personName": { "type": "string", "description": "Customer name" },
+        "phone": { "type": "string", "description": "Customer phone" },
+        "amount": { "type": "number", "description": "Total amount" },
+        "paidAmount": { "type": "number", "description": "Amount paid so far" },
+        "status": { "type": "string", "description": "pending, partially_paid, fully_paid, overdue" },
+        "date": { "type": "string", "description": "Creation date ISO string" },
+        "dueDate": { "type": "string", "description": "Due date ISO string" },
+        "purpose": { "type": "string", "description": "Purpose of loan/credit" },
+        "notes": { "type": "string", "description": "Additional notes" },
+        "profilePhoto": { "type": "string", "description": "Photo URL" }
+      },
+      "required": ["id", "userId", "type", "personName", "amount", "paidAmount", "status", "date"]
+    },
+    "expenses": {
+      "title": "Expense",
+      "description": "Expense and income entries",
+      "properties": {
+        "id": { "type": "string", "description": "Unique expense ID" },
+        "userId": { "type": "string", "description": "Owner user UID" },
+        "title": { "type": "string", "description": "Title/description" },
+        "amount": { "type": "number", "description": "Amount in PKR" },
+        "category": { "type": "string", "description": "Expense category" },
+        "type": { "type": "string", "description": "expense or income" },
+        "paymentMethod": { "type": "string", "description": "Payment method" },
+        "date": { "type": "string", "description": "Date ISO string" }
+      },
+      "required": ["id", "userId", "title", "amount", "category", "type", "paymentMethod", "date"]
+    },
+    "userProfiles": {
+      "title": "User Profile",
+      "description": "User business and app settings",
+      "properties": {
+        "userId": { "type": "string", "description": "User UID" },
+        "shopName": { "type": "string", "description": "Business/Shop name" },
+        "ownerName": { "type": "string", "description": "Owner name" },
+        "phone": { "type": "string", "description": "Phone number" },
+        "currency": { "type": "string", "description": "Currency code" },
+        "language": { "type": "string", "description": "App language" },
+        "themePreset": { "type": "string", "description": "Visual theme preset" }
+      },
+      "required": ["userId"]
+    }
+  }
+}
