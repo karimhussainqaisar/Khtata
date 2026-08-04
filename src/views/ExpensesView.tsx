@@ -3,7 +3,8 @@ import { Expense, ExpenseCategory, PaymentMethod, Language, UserProfile } from '
 import { getTranslation } from '../utils/translations';
 import { formatPKR, formatDatePK, getCategoryIcon } from '../utils/formatters';
 import { ExpenseReceiptModal } from '../components/ExpenseReceiptModal';
-import { Plus, Mic, Camera, Banknote, TrendingDown, TrendingUp, Filter, Tag, Trash2, Image as ImageIcon, ExternalLink } from 'lucide-react';
+import { downloadAllExpensesPDF } from '../utils/pdfGenerator';
+import { Plus, Mic, Camera, Banknote, TrendingDown, TrendingUp, Filter, Tag, Trash2, Image as ImageIcon, ExternalLink, Download, FileText } from 'lucide-react';
 
 interface ExpensesViewProps {
   expenses: Expense[];
@@ -59,6 +60,14 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
         </div>
 
         <div className="flex items-center space-x-1.5 rtl:space-x-reverse">
+          <button
+            onClick={() => downloadAllExpensesPDF(expenses, profile)}
+            className="p-2 rounded-2xl bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 font-bold text-xs hover:bg-purple-200 transition-colors flex items-center gap-1"
+            title="Export Expenses PDF"
+          >
+            <Download className="w-4 h-4 text-purple-600" />
+            <span className="hidden sm:inline">Export PDF</span>
+          </button>
           <button
             onClick={onOpenVoice}
             className="p-2 rounded-2xl bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 font-bold text-xs hover:bg-purple-200 transition-colors flex items-center gap-1"

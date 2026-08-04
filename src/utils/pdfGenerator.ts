@@ -1,5 +1,5 @@
 import { jsPDF } from 'jspdf';
-import { UdharRecord, UserProfile, RepaymentLog } from '../types';
+import { UdharRecord, UserProfile, RepaymentLog, Expense } from '../types';
 import { formatPKR, formatDatePK } from './formatters';
 
 export function generateCustomerTransactionPDF(record: UdharRecord, profile: UserProfile): jsPDF {
@@ -239,3 +239,427 @@ export function downloadCustomerTransactionPDF(record: UdharRecord, profile: Use
   const fileName = `KhataPro_Statement_${record.personName.replace(/\s+/g, '_')}_${record.id.slice(0, 6)}.pdf`;
   doc.save(fileName);
 }
+
+// ============================================
+// ALL TRANSACTIONS (UDHAR LEDGER) PDF EXPORT
+// ============================================
+export function generateAllTransactionsPDF(udharRecords: UdharRecord[], profile: UserProfile): jsPDF {
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4',
+  });
+
+  const shopName = profile.shopName || profile.name || 'KhataPro Ledger';
+  const shopPhone = profile.phone || '0300-1234567';
+
+  // Colors
+  const darkNavy = [15, 23, 42];
+  const primaryBlue = [37, 99, 235];
+  const emeraldGreen = [16, 185, 129];
+  const roseRed = [239, 68, 68];
+  const slateGray = [100, 116, 139];
+
+  // Header
+  doc.setFillColor(darkNavy[0], darkNavy[1], darkNavy[2]);
+  doc.rect(0, 0, 210, 36, 'F');
+  doc.setFillColor(primaryBlue[0], primaryBlue[1], primaryBlue[2]);
+  doc.rect(0, 36, 210, 3, 'F');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(20);
+  doc.setTextColor(255, 255, 255);
+  doc.text(shopName, 14, 18);
+
+  doc.setFontSize(9.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(203, 213, 225);
+  doc.text(`Complete Udhar Transactions & Ledger Report | Ph: ${shopPhone}`, 14, 26);
+  doc.text(`Date: ${new Date().toLocaleDateString()}`, 196, 18, { align: 'right' });
+  doc.text(`Total Records: ${udharRecords.length}`, 196, 26, { align: 'right' });
+
+  // Summary Math
+  const totalGiven = udharRecords.filter((r) => r.type === 'given').reduce((acc, r) => acc + r.amount, 0);
+  const totalGivenPaid = udharRecords.filter((r) => r.type === 'given').reduce((acc, r) => acc + r.paidAmount, 0);
+  const totalTaken = udharRecords.filter((r) => r.type === 'taken').reduce((acc, r) => acc + r.amount, 0);
+  const totalTakenPaid = udharRecords.filter((r) => r.type === 'taken').reduce((acc, r) => acc + r.paidAmount, 0);
+
+  const netReceivable = Math.max(0, totalGiven - totalGivenPaid);
+  const netPayable = Math.max(0, totalTaken - totalTakenPaid);
+
+  let y = 46;
+
+  // Summary Cards Grid
+  const cardW = 43;
+  const cardH = 18;
+
+  // Given
+  doc.setFillColor(241, 245, 249);
+  doc.roundedRect(14, y, cardW, cardH, 2, 2, 'F');
+  doc.setFontSize(7.5);
+  doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
+  doc.text('TOTAL UDHAR GIVEN', 17, y + 6);
+  doc.setFontSize(10.5);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(darkNavy[0], darkNavy[1], darkNavy[2]);
+  doc.text(formatPKR(totalGiven, profile.currency), 17, y + 14);
+
+  // Taken
+  doc.setFillColor(241, 245, 249);
+  doc.roundedRect(60, y, cardW, cardH, 2, 2, 'F');
+  doc.setFontSize(7.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
+  doc.text('TOTAL UDHAR TAKEN', 63, y + 6);
+  doc.setFontSize(10.5);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(darkNavy[0], darkNavy[1], darkNavy[2]);
+  doc.text(formatPKR(totalTaken, profile.currency), 63, y + 14);
+
+  // Net Receivable
+  doc.setFillColor(236, 253, 245);
+  doc.roundedRect(106, y, cardW, cardH, 2, 2, 'F');
+  doc.setFontSize(7.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(emeraldGreen[0], emeraldGreen[1], emeraldGreen[2]);
+  doc.text('NET RECEIVABLE', 109, y + 6);
+  doc.setFontSize(10.5);
+  doc.setFont('helvetica', 'bold');
+  doc.text(formatPKR(netReceivable, profile.currency), 109, y + 14);
+
+  // Net Payable
+  doc.setFillColor(254, 242, 242);
+  doc.roundedRect(153, y, cardW, cardH, 2, 2, 'F');
+  doc.setFontSize(7.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(roseRed[0], roseRed[1], roseRed[2]);
+  doc.text('NET PAYABLE', 156, y + 6);
+  doc.setFontSize(10.5);
+  doc.setFont('helvetica', 'bold');
+  doc.text(formatPKR(netPayable, profile.currency), 156, y + 14);
+
+  y += 26;
+
+  // Table Header Generator
+  const drawTableHeader = (currentY: number) => {
+    doc.setFillColor(darkNavy[0], darkNavy[1], darkNavy[2]);
+    doc.rect(14, currentY, 182, 8, 'F');
+
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(255, 255, 255);
+    doc.text('DATE', 18, currentY + 5.5);
+    doc.text('PERSON NAME', 44, currentY + 5.5);
+    doc.text('TYPE', 96, currentY + 5.5);
+    doc.text('TOTAL (PKR)', 122, currentY + 5.5);
+    doc.text('PAID (PKR)', 154, currentY + 5.5);
+    doc.text('REMAINING', 192, currentY + 5.5, { align: 'right' });
+  };
+
+  drawTableHeader(y);
+  y += 8;
+
+  let pageNum = 1;
+
+  if (udharRecords.length === 0) {
+    doc.setFillColor(248, 250, 252);
+    doc.rect(14, y, 182, 10, 'F');
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'italic');
+    doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
+    doc.text('No transactions recorded in the ledger.', 18, y + 6.5);
+  } else {
+    udharRecords.forEach((r, idx) => {
+      if (y > 265) {
+        doc.addPage();
+        pageNum++;
+        // Running page header
+        doc.setFillColor(darkNavy[0], darkNavy[1], darkNavy[2]);
+        doc.rect(0, 0, 210, 12, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(255, 255, 255);
+        doc.text(`${shopName} - All Udhar Transactions Ledger`, 14, 8);
+        doc.text(`Page ${pageNum}`, 196, 8, { align: 'right' });
+
+        y = 20;
+        drawTableHeader(y);
+        y += 8;
+      }
+
+      const remaining = Math.max(0, r.amount - r.paidAmount);
+      const isGiven = r.type === 'given';
+
+      if (idx % 2 === 0) {
+        doc.setFillColor(248, 250, 252);
+        doc.rect(14, y, 182, 8, 'F');
+      }
+
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(darkNavy[0], darkNavy[1], darkNavy[2]);
+
+      doc.text(formatDatePK(r.date), 18, y + 5.5);
+      doc.text(r.personName.slice(0, 24), 44, y + 5.5);
+
+      doc.setFont('helvetica', 'bold');
+      if (isGiven) {
+        doc.setTextColor(primaryBlue[0], primaryBlue[1], primaryBlue[2]);
+        doc.text('Given (Lend)', 96, y + 5.5);
+      } else {
+        doc.setTextColor(roseRed[0], roseRed[1], roseRed[2]);
+        doc.text('Taken (Borrow)', 96, y + 5.5);
+      }
+
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(darkNavy[0], darkNavy[1], darkNavy[2]);
+      doc.text(formatPKR(r.amount, profile.currency), 122, y + 5.5);
+
+      doc.setTextColor(emeraldGreen[0], emeraldGreen[1], emeraldGreen[2]);
+      doc.text(formatPKR(r.paidAmount, profile.currency), 154, y + 5.5);
+
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(remaining === 0 ? emeraldGreen[0] : roseRed[0], remaining === 0 ? emeraldGreen[1] : roseRed[1], remaining === 0 ? emeraldGreen[2] : roseRed[2]);
+      doc.text(formatPKR(remaining, profile.currency), 192, y + 5.5, { align: 'right' });
+
+      y += 8;
+    });
+  }
+
+  // Footer Signature
+  if (y + 30 > 280) {
+    doc.addPage();
+    y = 20;
+  } else {
+    y += 12;
+  }
+
+  doc.setDrawColor(203, 213, 225);
+  doc.line(14, y, 196, y);
+
+  y += 8;
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(darkNavy[0], darkNavy[1], darkNavy[2]);
+  doc.text('KhataPro Official Verified Report', 14, y + 4);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
+  doc.text('Auto-generated consolidated transaction summary statement.', 14, y + 9);
+
+  doc.setDrawColor(148, 163, 184);
+  doc.line(140, y + 8, 196, y + 8);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(darkNavy[0], darkNavy[1], darkNavy[2]);
+  doc.text('Authorized Signature / Stamp', 168, y + 13, { align: 'center' });
+
+  return doc;
+}
+
+export function downloadAllTransactionsPDF(udharRecords: UdharRecord[], profile: UserProfile) {
+  const doc = generateAllTransactionsPDF(udharRecords, profile);
+  const dateStr = new Date().toISOString().split('T')[0];
+  doc.save(`KhataPro_All_Transactions_${dateStr}.pdf`);
+}
+
+// ============================================
+// ALL EXPENSES PDF EXPORT
+// ============================================
+export function generateAllExpensesPDF(expenses: Expense[], profile: UserProfile): jsPDF {
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4',
+  });
+
+  const shopName = profile.shopName || profile.name || 'KhataPro Ledger';
+  const shopPhone = profile.phone || '0300-1234567';
+
+  // Colors
+  const darkNavy = [15, 23, 42];
+  const primaryPurple = [147, 51, 234];
+  const emeraldGreen = [16, 185, 129];
+  const roseRed = [239, 68, 68];
+  const slateGray = [100, 116, 139];
+
+  // Top Banner
+  doc.setFillColor(darkNavy[0], darkNavy[1], darkNavy[2]);
+  doc.rect(0, 0, 210, 36, 'F');
+  doc.setFillColor(primaryPurple[0], primaryPurple[1], primaryPurple[2]);
+  doc.rect(0, 36, 210, 3, 'F');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(20);
+  doc.setTextColor(255, 255, 255);
+  doc.text(shopName, 14, 18);
+
+  doc.setFontSize(9.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(203, 213, 225);
+  doc.text(`Complete Expenses Statement Report | Ph: ${shopPhone}`, 14, 26);
+  doc.text(`Date: ${new Date().toLocaleDateString()}`, 196, 18, { align: 'right' });
+  doc.text(`Total Records: ${expenses.length}`, 196, 26, { align: 'right' });
+
+  // Summary Math
+  const totalExpenses = expenses.filter((e) => e.type === 'expense').reduce((acc, e) => acc + e.amount, 0);
+  const totalIncome = expenses.filter((e) => e.type === 'income').reduce((acc, e) => acc + e.amount, 0);
+  const netBalance = totalIncome - totalExpenses;
+
+  let y = 46;
+
+  // Summary Cards
+  const cardW = 57;
+  const cardH = 18;
+
+  // Total Expenses
+  doc.setFillColor(254, 242, 242);
+  doc.roundedRect(14, y, cardW, cardH, 2, 2, 'F');
+  doc.setFontSize(7.5);
+  doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
+  doc.text('TOTAL EXPENSES (PKR)', 17, y + 6);
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(roseRed[0], roseRed[1], roseRed[2]);
+  doc.text(formatPKR(totalExpenses, profile.currency), 17, y + 14);
+
+  // Total Income
+  doc.setFillColor(236, 253, 245);
+  doc.roundedRect(76, y, cardW, cardH, 2, 2, 'F');
+  doc.setFontSize(7.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
+  doc.text('TOTAL INCOME (PKR)', 79, y + 6);
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(emeraldGreen[0], emeraldGreen[1], emeraldGreen[2]);
+  doc.text(formatPKR(totalIncome, profile.currency), 79, y + 14);
+
+  // Net Cash Flow
+  doc.setFillColor(netBalance >= 0 ? 236 : 254, netBalance >= 0 ? 253 : 242, netBalance >= 0 ? 245 : 242);
+  doc.roundedRect(139, y, cardW, cardH, 2, 2, 'F');
+  doc.setFontSize(7.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
+  doc.text('NET CASH FLOW', 142, y + 6);
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(netBalance >= 0 ? emeraldGreen[0] : roseRed[0], netBalance >= 0 ? emeraldGreen[1] : roseRed[1], netBalance >= 0 ? emeraldGreen[2] : roseRed[2]);
+  doc.text(formatPKR(netBalance, profile.currency), 142, y + 14);
+
+  y += 26;
+
+  // Table Header
+  const drawTableHeader = (currentY: number) => {
+    doc.setFillColor(darkNavy[0], darkNavy[1], darkNavy[2]);
+    doc.rect(14, currentY, 182, 8, 'F');
+
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(255, 255, 255);
+    doc.text('DATE', 18, currentY + 5.5);
+    doc.text('TITLE / DESCRIPTION', 46, currentY + 5.5);
+    doc.text('CATEGORY', 105, currentY + 5.5);
+    doc.text('TYPE', 142, currentY + 5.5);
+    doc.text('METHOD', 165, currentY + 5.5);
+    doc.text('AMOUNT', 192, currentY + 5.5, { align: 'right' });
+  };
+
+  drawTableHeader(y);
+  y += 8;
+
+  let pageNum = 1;
+
+  if (expenses.length === 0) {
+    doc.setFillColor(248, 250, 252);
+    doc.rect(14, y, 182, 10, 'F');
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'italic');
+    doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
+    doc.text('No expenses recorded yet.', 18, y + 6.5);
+  } else {
+    expenses.forEach((e, idx) => {
+      if (y > 265) {
+        doc.addPage();
+        pageNum++;
+        // Running page header
+        doc.setFillColor(darkNavy[0], darkNavy[1], darkNavy[2]);
+        doc.rect(0, 0, 210, 12, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(255, 255, 255);
+        doc.text(`${shopName} - Expenses Statement Report`, 14, 8);
+        doc.text(`Page ${pageNum}`, 196, 8, { align: 'right' });
+
+        y = 20;
+        drawTableHeader(y);
+        y += 8;
+      }
+
+      if (idx % 2 === 0) {
+        doc.setFillColor(248, 250, 252);
+        doc.rect(14, y, 182, 8, 'F');
+      }
+
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(darkNavy[0], darkNavy[1], darkNavy[2]);
+
+      doc.text(formatDatePK(e.date), 18, y + 5.5);
+      doc.text(e.title.slice(0, 26), 46, y + 5.5);
+      doc.text(e.category.slice(0, 18), 105, y + 5.5);
+
+      doc.setFont('helvetica', 'bold');
+      if (e.type === 'expense') {
+        doc.setTextColor(roseRed[0], roseRed[1], roseRed[2]);
+        doc.text('Expense', 142, y + 5.5);
+      } else {
+        doc.setTextColor(emeraldGreen[0], emeraldGreen[1], emeraldGreen[2]);
+        doc.text('Income', 142, y + 5.5);
+      }
+
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(darkNavy[0], darkNavy[1], darkNavy[2]);
+      doc.text(e.paymentMethod, 165, y + 5.5);
+
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(e.type === 'expense' ? roseRed[0] : emeraldGreen[0], e.type === 'expense' ? roseRed[1] : emeraldGreen[1], e.type === 'expense' ? roseRed[2] : emeraldGreen[2]);
+      doc.text(`${e.type === 'expense' ? '-' : '+'} ${formatPKR(e.amount, profile.currency)}`, 192, y + 5.5, { align: 'right' });
+
+      y += 8;
+    });
+  }
+
+  // Footer Signature
+  if (y + 30 > 280) {
+    doc.addPage();
+    y = 20;
+  } else {
+    y += 12;
+  }
+
+  doc.setDrawColor(203, 213, 225);
+  doc.line(14, y, 196, y);
+
+  y += 8;
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(darkNavy[0], darkNavy[1], darkNavy[2]);
+  doc.text('KhataPro Expenses Verified Report', 14, y + 4);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
+  doc.text('Auto-generated consolidated expenses statement document.', 14, y + 9);
+
+  doc.setDrawColor(148, 163, 184);
+  doc.line(140, y + 8, 196, y + 8);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(darkNavy[0], darkNavy[1], darkNavy[2]);
+  doc.text('Authorized Signature / Stamp', 168, y + 13, { align: 'center' });
+
+  return doc;
+}
+
+export function downloadAllExpensesPDF(expenses: Expense[], profile: UserProfile) {
+  const doc = generateAllExpensesPDF(expenses, profile);
+  const dateStr = new Date().toISOString().split('T')[0];
+  doc.save(`KhataPro_All_Expenses_${dateStr}.pdf`);
+}
+

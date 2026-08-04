@@ -408,6 +408,7 @@ export default function App() {
         udharRecords={udharRecords}
         expenses={expenses}
         language={profile.language}
+        profile={profile}
       />
     </div>
   );

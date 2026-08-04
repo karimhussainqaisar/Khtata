@@ -4,6 +4,7 @@ import { getTranslation } from '../utils/translations';
 import { formatPKR, formatDatePK, getDaysRemainingOrOverdue } from '../utils/formatters';
 import { getThemePresetConfig } from '../utils/theme';
 import { CustomerPdfModal } from '../components/CustomerPdfModal';
+import { downloadAllTransactionsPDF } from '../utils/pdfGenerator';
 import {
   Search,
   Plus,
@@ -99,12 +100,22 @@ export const UdharView: React.FC<UdharViewProps> = ({
             Digital notebook for Pakistani credit & debts
           </p>
         </div>
-        <button
-          onClick={() => onOpenAddUdhar(activeType)}
-          className={`px-3.5 py-2 rounded-2xl font-bold text-xs shadow-md flex items-center gap-1.5 transition-all active:scale-95 ${theme.primaryBtnClass}`}
-        >
-          <Plus className="w-4 h-4" /> Add Record
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => downloadAllTransactionsPDF(udharRecords, profile)}
+            className="px-3 py-2 rounded-2xl bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-bold text-xs hover:bg-indigo-200 transition-colors flex items-center gap-1.5"
+            title="Export All Transactions PDF"
+          >
+            <Download className="w-4 h-4 text-indigo-600" />
+            <span className="hidden sm:inline">Export PDF</span>
+          </button>
+          <button
+            onClick={() => onOpenAddUdhar(activeType)}
+            className={`px-3.5 py-2 rounded-2xl font-bold text-xs shadow-md flex items-center gap-1.5 transition-all active:scale-95 ${theme.primaryBtnClass}`}
+          >
+            <Plus className="w-4 h-4" /> Add Record
+          </button>
+        </div>
       </div>
 
       {/* Main 2 Sub-Tabs: 1. Maine Diya (Given) / 2. Maine Liya (Taken) */}
