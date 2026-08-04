@@ -65,7 +65,7 @@ export const UdharView: React.FC<UdharViewProps> = ({
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [deletePaymentConfirm, setDeletePaymentConfirm] = useState<{ udharId: string; paymentId: string } | null>(null);
-  const [selectedPdfRecord, setSelectedPdfRecord] = useState<UdharRecord | null>(null);
+  const [selectedPdfRecords, setSelectedPdfRecords] = useState<UdharRecord[] | UdharRecord | null>(null);
   const theme = getThemePresetConfig(profile.themePreset);
 
   const hasActiveFilters =
@@ -460,16 +460,14 @@ export const UdharView: React.FC<UdharViewProps> = ({
                     {/* Quick Customer Action Buttons */}
                     <div className="flex items-center space-x-1.5 rtl:space-x-reverse" onClick={(e) => e.stopPropagation()}>
                       {/* PDF Export for Customer */}
-                      {pendingRecord && (
-                        <button
-                          onClick={() => setSelectedPdfRecord(pendingRecord)}
-                          className="p-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 text-xs flex items-center gap-1 font-semibold"
-                          title="Export Customer PDF Statement"
-                        >
-                          <Download className="w-3.5 h-3.5" />
-                          <span className="hidden sm:inline text-[11px]">PDF</span>
-                        </button>
-                      )}
+                      <button
+                        onClick={() => setSelectedPdfRecords(group.records)}
+                        className="p-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 text-xs flex items-center gap-1 font-semibold"
+                        title="Export Customer PDF Statement"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline text-[11px]">PDF</span>
+                      </button>
 
                       {/* WhatsApp Reminder for Customer */}
                       {group.totalRemaining > 0 && pendingRecord && (
@@ -577,7 +575,7 @@ export const UdharView: React.FC<UdharViewProps> = ({
 
                               <div className="flex items-center gap-1.5">
                                 <button
-                                  onClick={() => setSelectedPdfRecord(record)}
+                                  onClick={() => setSelectedPdfRecords(record)}
                                   className="p-1 text-slate-400 hover:text-indigo-600"
                                   title="Export PDF"
                                 >
@@ -795,7 +793,12 @@ export const UdharView: React.FC<UdharViewProps> = ({
                     <div className="flex items-center space-x-1.5 rtl:space-x-reverse" onClick={(e) => e.stopPropagation()}>
                       {/* PDF Export Button */}
                       <button
-                        onClick={() => setSelectedPdfRecord(record)}
+                        onClick={() => {
+                          const sameCustRecords = udharRecords.filter(
+                            (r) => r.personName.toLowerCase() === record.personName.toLowerCase() && r.type === record.type
+                          );
+                          setSelectedPdfRecords(sameCustRecords.length > 0 ? sameCustRecords : [record]);
+                        }}
                         className="p-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 text-xs flex items-center gap-1 font-semibold"
                         title="Export PDF Statement"
                       >
@@ -972,7 +975,13 @@ export const UdharView: React.FC<UdharViewProps> = ({
 
                     <div className="pt-2 flex justify-end gap-2">
                       <button
-                        onClick={() => setSelectedPdfRecord(record)}
+                        onClick={() =>
+                          setSelectedPdfRecords(
+                            udharRecords.filter(
+                              (r) => r.personName.toLowerCase() === record.personName.toLowerCase() && r.type === record.type
+                            )
+                          )
+                        }
                         className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-sm flex items-center gap-1.5"
                       >
                         <Download className="w-3.5 h-3.5" />
@@ -996,9 +1005,9 @@ export const UdharView: React.FC<UdharViewProps> = ({
 
       {/* Customer PDF Modal */}
       <CustomerPdfModal
-        isOpen={!!selectedPdfRecord}
-        onClose={() => setSelectedPdfRecord(null)}
-        record={selectedPdfRecord}
+        isOpen={!!selectedPdfRecords}
+        onClose={() => setSelectedPdfRecords(null)}
+        records={selectedPdfRecords}
         profile={profile}
       />
     </div>

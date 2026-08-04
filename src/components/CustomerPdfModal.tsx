@@ -7,7 +7,8 @@ import { X, FileText, Download, Printer, Share2, ShieldCheck, CheckCircle2 } fro
 interface CustomerPdfModalProps {
   isOpen: boolean;
   onClose: () => void;
-  record: UdharRecord | null;
+  record?: UdharRecord | UdharRecord[] | null;
+  records?: UdharRecord | UdharRecord[] | null;
   profile: UserProfile;
 }
 
@@ -15,15 +16,32 @@ export const CustomerPdfModal: React.FC<CustomerPdfModalProps> = ({
   isOpen,
   onClose,
   record,
+  records,
   profile,
 }) => {
-  if (!isOpen || !record) return null;
+  const inputData = records || record;
+  if (!isOpen || !inputData) return null;
 
-  const remaining = Math.max(0, record.amount - record.paidAmount);
-  const isSettled = record.paidAmount >= record.amount;
+  const recordList = Array.isArray(inputData) ? inputData : [inputData];
+  if (recordList.length === 0) return null;
+
+  const primaryRecord = recordList[0];
+  const personName = primaryRecord.personName;
+  const phone = primaryRecord.phone || 'N/A';
+
+  const totalAmount = recordList.reduce((acc, r) => acc + r.amount, 0);
+  const totalPaidAmount = recordList.reduce((acc, r) => acc + r.paidAmount, 0);
+  const totalRemaining = Math.max(0, totalAmount - totalPaidAmount);
+  const isSettled = totalRemaining === 0;
+
+  const allPayments = recordList
+    .flatMap((r) =>
+      (r.payments || []).map((p) => ({ ...p, entryPurpose: r.purpose || 'General Entry' }))
+    )
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const handleDownloadPdf = () => {
-    downloadCustomerTransactionPDF(record, profile);
+    downloadCustomerTransactionPDF(recordList, profile);
   };
 
   const handlePrint = () => {
@@ -44,7 +62,7 @@ export const CustomerPdfModal: React.FC<CustomerPdfModalProps> = ({
                 Customer PDF Statement (کھاتہ پی ڈی ایف)
               </h3>
               <p className="text-[11px] text-slate-400">
-                Official Document for {record.personName}
+                Official Consolidated Statement for {personName} ({recordList.length} {recordList.length === 1 ? 'Entry' : 'Entries'})
               </p>
             </div>
           </div>
@@ -64,7 +82,7 @@ export const CustomerPdfModal: React.FC<CustomerPdfModalProps> = ({
             className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold text-xs shadow-md shadow-indigo-600/20 flex items-center justify-center gap-2 transition-all active:scale-95"
           >
             <Download className="w-4 h-4" />
-            <span>Download PDF File (.pdf)</span>
+            <span>Download PDF File ({recordList.length} Entries)</span>
           </button>
 
           <button
@@ -105,15 +123,15 @@ export const CustomerPdfModal: React.FC<CustomerPdfModalProps> = ({
             <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
               <div>
                 <span className="text-slate-500 block text-[10px] uppercase font-bold">Customer Name</span>
-                <span className="font-bold text-sm text-slate-900">{record.personName}</span>
-                <span className="text-slate-500 block text-[11px] mt-0.5">{record.phone}</span>
+                <span className="font-bold text-sm text-slate-900">{personName}</span>
+                <span className="text-slate-500 block text-[11px] mt-0.5">{phone}</span>
               </div>
               <div className="text-right">
-                <span className="text-slate-500 block text-[10px] uppercase font-bold">Transaction Type</span>
+                <span className="text-slate-500 block text-[10px] uppercase font-bold">Total Entries</span>
                 <span className="font-bold text-indigo-700">
-                  {record.type === 'given' ? 'Udhar Given (Maine Diya)' : 'Udhar Taken (Maine Liya)'}
+                  {recordList.length} Combined Udhar {recordList.length === 1 ? 'Record' : 'Records'}
                 </span>
-                <span className="text-slate-500 block text-[11px] mt-0.5">{record.purpose}</span>
+                <span className="text-slate-500 block text-[11px] mt-0.5">Statement Period: All Time</span>
               </div>
             </div>
 
@@ -121,22 +139,62 @@ export const CustomerPdfModal: React.FC<CustomerPdfModalProps> = ({
             <div className="grid grid-cols-3 gap-2 text-center">
               <div className="p-2.5 rounded-xl bg-slate-100 border border-slate-200">
                 <span className="text-[10px] text-slate-500 font-bold block">TOTAL UDHAR</span>
-                <span className="text-xs font-black text-slate-900">{formatPKR(record.amount, profile.currency)}</span>
+                <span className="text-xs font-black text-slate-900">{formatPKR(totalAmount, profile.currency)}</span>
               </div>
               <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200">
                 <span className="text-[10px] text-emerald-700 font-bold block">PAID / RECEIVED</span>
-                <span className="text-xs font-black text-emerald-700">{formatPKR(record.paidAmount, profile.currency)}</span>
+                <span className="text-xs font-black text-emerald-700">{formatPKR(totalPaidAmount, profile.currency)}</span>
               </div>
               <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200">
                 <span className="text-[10px] text-rose-700 font-bold block">REMAINING BAL</span>
-                <span className="text-xs font-black text-rose-700">{formatPKR(remaining, profile.currency)}</span>
+                <span className="text-xs font-black text-rose-700">{formatPKR(totalRemaining, profile.currency)}</span>
+              </div>
+            </div>
+
+            {/* Combined Entries Table */}
+            <div className="space-y-2">
+              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                Combined Udhar Transactions ({recordList.length})
+              </h4>
+              <div className="border border-slate-200 rounded-xl overflow-hidden">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-slate-900 text-white font-bold text-[10px] uppercase">
+                      <th className="p-2">Date</th>
+                      <th className="p-2">Entry Purpose</th>
+                      <th className="p-2">Type</th>
+                      <th className="p-2 text-right">Amount</th>
+                      <th className="p-2 text-right">Remaining</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {recordList.map((r) => {
+                      const rem = Math.max(0, r.amount - r.paidAmount);
+                      return (
+                        <tr key={r.id} className="hover:bg-slate-50">
+                          <td className="p-2 font-medium">{formatDatePK(r.date)}</td>
+                          <td className="p-2 font-semibold">{r.purpose || 'General Entry'}</td>
+                          <td className="p-2">
+                            <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${r.type === 'given' ? 'bg-indigo-100 text-indigo-700' : 'bg-rose-100 text-rose-700'}`}>
+                              {r.type === 'given' ? 'Given' : 'Taken'}
+                            </span>
+                          </td>
+                          <td className="p-2 text-right font-bold">{formatPKR(r.amount, profile.currency)}</td>
+                          <td className={`p-2 text-right font-bold ${rem === 0 ? 'text-emerald-700' : 'text-rose-600'}`}>
+                            {formatPKR(rem, profile.currency)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             </div>
 
             {/* Repayment History Table */}
             <div className="space-y-2">
               <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                Repayment Log History
+                Repayment Log History ({allPayments.length})
               </h4>
 
               <div className="border border-slate-200 rounded-xl overflow-hidden">
@@ -144,16 +202,18 @@ export const CustomerPdfModal: React.FC<CustomerPdfModalProps> = ({
                   <thead>
                     <tr className="bg-slate-900 text-white font-bold text-[10px] uppercase">
                       <th className="p-2">Date</th>
+                      <th className="p-2">For Entry</th>
                       <th className="p-2">Method</th>
                       <th className="p-2">Txn ID</th>
                       <th className="p-2 text-right">Amount</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200">
-                    {record.payments && record.payments.length > 0 ? (
-                      record.payments.map((p) => (
+                    {allPayments.length > 0 ? (
+                      allPayments.map((p) => (
                         <tr key={p.id} className="hover:bg-slate-50">
                           <td className="p-2 font-medium">{formatDatePK(p.date)}</td>
+                          <td className="p-2 text-slate-700">{p.entryPurpose}</td>
                           <td className="p-2">{p.paymentMethod}</td>
                           <td className="p-2 text-slate-500 font-mono text-[10px]">{p.transactionId || 'KP-PAY'}</td>
                           <td className="p-2 text-right font-bold text-emerald-700">
@@ -163,8 +223,8 @@ export const CustomerPdfModal: React.FC<CustomerPdfModalProps> = ({
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={4} className="p-3 text-center text-slate-400 text-xs italic">
-                          No repayments recorded yet.
+                        <td colSpan={5} className="p-3 text-center text-slate-400 text-xs italic">
+                          No repayments recorded yet for this customer.
                         </td>
                       </tr>
                     )}

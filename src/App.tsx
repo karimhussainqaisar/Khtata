@@ -45,6 +45,7 @@ import { VoiceInputModal } from './components/VoiceInputModal';
 import { ReceiptScanModal } from './components/ReceiptScanModal';
 import { PinLockModal } from './components/PinLockModal';
 import { ExportReportModal } from './components/ExportReportModal';
+import { AuthErrorModal } from './components/AuthErrorModal';
 
 import { HomeView } from './views/HomeView';
 import { UdharView } from './views/UdharView';
@@ -85,10 +86,19 @@ export default function App() {
   const [isVoiceOpen, setIsVoiceOpen] = useState(false);
   const [isScanOpen, setIsScanOpen] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
+  const [authError, setAuthError] = useState<{ code?: string; message?: string; domain?: string } | null>(null);
 
   // Check for redirect result on boot (for mobile/popup blocked fallbacks)
   useEffect(() => {
-    checkRedirectResult();
+    checkRedirectResult().then((res) => {
+      if (res?.error) {
+        setAuthError({
+          code: res.error.code || 'auth/unauthorized-domain',
+          message: res.error.message || 'Google Login failed on redirect.',
+          domain: window.location.hostname,
+        });
+      }
+    });
   }, []);
 
   // Subscribe to Firebase Auth State Changes
@@ -172,9 +182,22 @@ export default function App() {
   const handleGoogleLogin = async () => {
     try {
       setAuthLoading(true);
-      await signInWithGoogle();
-    } catch (err) {
+      setAuthError(null);
+      const res = await signInWithGoogle();
+      if (res?.error) {
+        setAuthError({
+          code: res.error.code || 'auth/unauthorized-domain',
+          message: res.error.message || 'Failed to log in with Google.',
+          domain: window.location.hostname,
+        });
+      }
+    } catch (err: any) {
       console.error('Failed to log in with Google:', err);
+      setAuthError({
+        code: err?.code || 'auth/unauthorized-domain',
+        message: err?.message || 'Failed to log in with Google.',
+        domain: window.location.hostname,
+      });
     } finally {
       setAuthLoading(false);
     }
@@ -563,6 +586,12 @@ export default function App() {
         expenses={expenses}
         language={profile.language}
         profile={profile}
+      />
+
+      <AuthErrorModal
+        isOpen={!!authError}
+        onClose={() => setAuthError(null)}
+        error={authError}
       />
     </div>
   );

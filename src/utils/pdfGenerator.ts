@@ -2,7 +2,19 @@ import { jsPDF } from 'jspdf';
 import { UdharRecord, UserProfile, RepaymentLog, Expense } from '../types';
 import { formatPKR, formatDatePK } from './formatters';
 
-export function generateCustomerTransactionPDF(record: UdharRecord, profile: UserProfile): jsPDF {
+export function generateCustomerTransactionPDF(
+  recordInput: UdharRecord | UdharRecord[],
+  profile: UserProfile
+): jsPDF {
+  const records = Array.isArray(recordInput) ? recordInput : [recordInput];
+  if (records.length === 0) {
+    return new jsPDF();
+  }
+
+  const primaryRecord = records[0];
+  const personName = primaryRecord.personName;
+  const phone = primaryRecord.phone || 'N/A';
+
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -11,16 +23,19 @@ export function generateCustomerTransactionPDF(record: UdharRecord, profile: Use
 
   const shopName = profile.shopName || profile.name || 'KhataPro Ledger';
   const shopPhone = profile.phone || '0300-1234567';
-  const remaining = Math.max(0, record.amount - record.paidAmount);
-  const isGiven = record.type === 'given';
+
+  // Math totals across all combined records
+  const totalAmount = records.reduce((acc, r) => acc + r.amount, 0);
+  const totalPaid = records.reduce((acc, r) => acc + r.paidAmount, 0);
+  const remaining = Math.max(0, totalAmount - totalPaid);
 
   // Palette
-  const darkNavy = [15, 23, 42]; // #0F172A
-  const primaryBlue = [37, 99, 235]; // #2563EB
-  const emeraldGreen = [16, 185, 129]; // #10B981
-  const roseRed = [239, 68, 68]; // #EF4444
-  const slateGray = [100, 116, 139]; // #64748B
-  const lightBg = [248, 250, 252]; // #F8FAFC
+  const darkNavy = [15, 23, 42];
+  const primaryBlue = [37, 99, 235];
+  const emeraldGreen = [16, 185, 129];
+  const roseRed = [239, 68, 68];
+  const slateGray = [100, 116, 139];
+  const lightBg = [248, 250, 252];
 
   // Top Header Banner
   doc.setFillColor(darkNavy[0], darkNavy[1], darkNavy[2]);
@@ -32,7 +47,7 @@ export function generateCustomerTransactionPDF(record: UdharRecord, profile: Use
 
   // Header Text
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(22);
+  doc.setFontSize(20);
   doc.setTextColor(255, 255, 255);
   doc.text(shopName, 14, 18);
 
@@ -41,59 +56,60 @@ export function generateCustomerTransactionPDF(record: UdharRecord, profile: Use
   doc.setTextColor(203, 213, 225);
   doc.text(`Digital Udhar Ledger Statement | Ph: ${shopPhone}`, 14, 26);
   doc.text(`Generated: ${new Date().toLocaleDateString()}`, 196, 18, { align: 'right' });
-  doc.text(`Ref ID: KP-${record.id.slice(0, 8).toUpperCase()}`, 196, 26, { align: 'right' });
+  doc.text(`Total Entries: ${records.length}`, 196, 26, { align: 'right' });
 
   // Document Title
   doc.setFillColor(lightBg[0], lightBg[1], lightBg[2]);
   doc.roundedRect(14, 48, 182, 18, 3, 3, 'F');
   
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
+  doc.setFontSize(11);
   doc.setTextColor(darkNavy[0], darkNavy[1], darkNavy[2]);
-  doc.text('CUSTOMER TRANSACTION & UDHAR STATEMENT', 18, 59);
+  doc.text('CUSTOMER CONSOLIDATED TRANSACTION STATEMENT', 18, 59);
 
   // Status Badge
   let badgeColor = primaryBlue;
   let statusText = 'PENDING UNPAID';
-  if (record.paidAmount >= record.amount) {
+  if (totalPaid >= totalAmount) {
     badgeColor = emeraldGreen;
     statusText = 'FULLY SETTLED';
-  } else if (record.paidAmount > 0) {
-    badgeColor = [217, 119, 6]; // Amber
+  } else if (totalPaid > 0) {
+    badgeColor = [217, 119, 6];
     statusText = 'PARTIALLY PAID';
   }
   doc.setFillColor(badgeColor[0], badgeColor[1], badgeColor[2]);
-  doc.roundedRect(148, 52, 44, 10, 2, 2, 'F');
+  doc.roundedRect(144, 52, 48, 10, 2, 2, 'F');
   doc.setFontSize(8);
   doc.setTextColor(255, 255, 255);
-  doc.text(statusText, 170, 58.5, { align: 'center' });
+  doc.text(statusText, 168, 58.5, { align: 'center' });
 
   // Customer Profile Section
   let y = 74;
 
   doc.setLineWidth(0.3);
   doc.setDrawColor(226, 232, 240);
-  doc.roundedRect(14, y, 182, 32, 3, 3, 'D');
+  doc.roundedRect(14, y, 182, 28, 3, 3, 'D');
 
-  doc.setFontSize(9);
+  doc.setFontSize(8.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
-  doc.text('CUSTOMER INFORMATION', 18, y + 8);
+  doc.text('CUSTOMER INFORMATION', 18, y + 7);
 
   doc.setFontSize(12);
   doc.setTextColor(darkNavy[0], darkNavy[1], darkNavy[2]);
-  doc.text(`Name: ${record.personName}`, 18, y + 18);
+  doc.text(`Name: ${personName}`, 18, y + 17);
 
-  doc.setFontSize(10);
+  doc.setFontSize(9.5);
   doc.setFont('helvetica', 'normal');
-  doc.text(`Phone: ${record.phone || 'N/A'}`, 18, y + 25);
+  doc.text(`Phone: ${phone}`, 18, y + 23);
 
   doc.setFont('helvetica', 'bold');
-  doc.text(`Transaction Type: ${isGiven ? 'Udhar Given (Maine Diya)' : 'Udhar Taken (Maine Liya)'}`, 110, y + 18);
-  doc.text(`Purpose / Details: ${record.purpose || 'General Account'}`, 110, y + 25);
+  doc.text(`Total Combined Entries: ${records.length}`, 120, y + 17);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Statement Date: ${new Date().toLocaleDateString()}`, 120, y + 23);
 
   // Financial Summary Cards
-  y += 40;
+  y += 34;
 
   const cardW = 57;
   const cardH = 22;
@@ -104,10 +120,10 @@ export function generateCustomerTransactionPDF(record: UdharRecord, profile: Use
   doc.setFontSize(8);
   doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
   doc.text('TOTAL UDHAR AMOUNT', 18, y + 7);
-  doc.setFontSize(12);
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(darkNavy[0], darkNavy[1], darkNavy[2]);
-  doc.text(formatPKR(record.amount, profile.currency), 18, y + 16);
+  doc.text(formatPKR(totalAmount, profile.currency), 18, y + 16);
 
   // Paid Amount
   doc.setFillColor(236, 253, 245);
@@ -116,10 +132,10 @@ export function generateCustomerTransactionPDF(record: UdharRecord, profile: Use
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
   doc.text('TOTAL PAID / RECEIVED', 80, y + 7);
-  doc.setFontSize(12);
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(emeraldGreen[0], emeraldGreen[1], emeraldGreen[2]);
-  doc.text(formatPKR(record.paidAmount, profile.currency), 80, y + 16);
+  doc.text(formatPKR(totalPaid, profile.currency), 80, y + 16);
 
   // Remaining Balance
   doc.setFillColor(remaining === 0 ? 236 : 254, remaining === 0 ? 253 : 242, remaining === 0 ? 245 : 242);
@@ -128,115 +144,207 @@ export function generateCustomerTransactionPDF(record: UdharRecord, profile: Use
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
   doc.text('REMAINING BALANCE', 143, y + 7);
-  doc.setFontSize(12);
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(remaining === 0 ? emeraldGreen[0] : roseRed[0], remaining === 0 ? emeraldGreen[1] : roseRed[1], remaining === 0 ? emeraldGreen[2] : roseRed[2]);
   doc.text(formatPKR(remaining, profile.currency), 143, y + 16);
 
-  // Repayment Table Section
-  y += 32;
+  // 1. COMBINED TRANSACTIONS TABLE
+  y += 30;
 
-  doc.setFontSize(11);
+  doc.setFontSize(10.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(darkNavy[0], darkNavy[1], darkNavy[2]);
-  doc.text('REPAYMENT LOGS & PAYMENT HISTORY', 14, y);
+  doc.text('COMBINED UDHAR TRANSACTIONS', 14, y);
 
-  y += 5;
+  y += 4;
 
-  // Table Header
-  doc.setFillColor(darkNavy[0], darkNavy[1], darkNavy[2]);
-  doc.rect(14, y, 182, 8, 'F');
+  const drawEntriesHeader = (currentY: number) => {
+    doc.setFillColor(darkNavy[0], darkNavy[1], darkNavy[2]);
+    doc.rect(14, currentY, 182, 7.5, 'F');
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(255, 255, 255);
+    doc.text('DATE', 16, currentY + 5);
+    doc.text('PURPOSE / ENTRY', 42, currentY + 5);
+    doc.text('TYPE', 96, currentY + 5);
+    doc.text('TOTAL (PKR)', 125, currentY + 5);
+    doc.text('PAID (PKR)', 155, currentY + 5);
+    doc.text('REMAINING', 194, currentY + 5, { align: 'right' });
+  };
 
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(255, 255, 255);
-  doc.text('DATE', 16, y + 5.5);
-  doc.text('TRANSACTION ID', 45, y + 5.5);
-  doc.text('METHOD', 95, y + 5.5);
-  doc.text('AMOUNT PAID', 132, y + 5.5);
-  doc.text('RUNNING BAL', 194, y + 5.5, { align: 'right' });
+  drawEntriesHeader(y);
+  y += 7.5;
 
+  records.forEach((rec, idx) => {
+    if (y > 265) {
+      doc.addPage();
+      y = 20;
+      drawEntriesHeader(y);
+      y += 7.5;
+    }
+
+    const recRem = Math.max(0, rec.amount - rec.paidAmount);
+    if (idx % 2 === 0) {
+      doc.setFillColor(248, 250, 252);
+      doc.rect(14, y, 182, 7, 'F');
+    }
+
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(darkNavy[0], darkNavy[1], darkNavy[2]);
+
+    doc.text(formatDatePK(rec.date), 16, y + 4.8);
+    doc.text((rec.purpose || 'General Entry').slice(0, 24), 42, y + 4.8);
+
+    doc.setFont('helvetica', 'bold');
+    if (rec.type === 'given') {
+      doc.setTextColor(primaryBlue[0], primaryBlue[1], primaryBlue[2]);
+      doc.text('Given', 96, y + 4.8);
+    } else {
+      doc.setTextColor(roseRed[0], roseRed[1], roseRed[2]);
+      doc.text('Taken', 96, y + 4.8);
+    }
+
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(darkNavy[0], darkNavy[1], darkNavy[2]);
+    doc.text(formatPKR(rec.amount, profile.currency), 125, y + 4.8);
+
+    doc.setTextColor(emeraldGreen[0], emeraldGreen[1], emeraldGreen[2]);
+    doc.text(formatPKR(rec.paidAmount, profile.currency), 155, y + 4.8);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(recRem === 0 ? emeraldGreen[0] : roseRed[0], recRem === 0 ? emeraldGreen[1] : roseRed[1], recRem === 0 ? emeraldGreen[2] : roseRed[2]);
+    doc.text(formatPKR(recRem, profile.currency), 194, y + 4.8, { align: 'right' });
+
+    y += 7;
+  });
+
+  // 2. REPAYMENT LOG HISTORY TABLE
   y += 8;
+  if (y > 250) {
+    doc.addPage();
+    y = 20;
+  }
 
-  let currentBal = record.amount;
-  const payments = record.payments || [];
+  doc.setFontSize(10.5);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(darkNavy[0], darkNavy[1], darkNavy[2]);
+  doc.text('PAYMENT LOGS & REPAYMENT HISTORY', 14, y);
 
-  if (payments.length === 0) {
+  y += 4;
+
+  const drawPaymentHeader = (currentY: number) => {
+    doc.setFillColor(darkNavy[0], darkNavy[1], darkNavy[2]);
+    doc.rect(14, currentY, 182, 7.5, 'F');
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(255, 255, 255);
+    doc.text('DATE', 16, currentY + 5);
+    doc.text('FOR ENTRY', 42, currentY + 5);
+    doc.text('METHOD', 96, currentY + 5);
+    doc.text('TXN ID', 130, currentY + 5);
+    doc.text('AMOUNT PAID', 194, currentY + 5, { align: 'right' });
+  };
+
+  drawPaymentHeader(y);
+  y += 7.5;
+
+  const allPayments = records
+    .flatMap((r) =>
+      (r.payments || []).map((p) => ({ ...p, entryPurpose: r.purpose || 'General Entry' }))
+    )
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  if (allPayments.length === 0) {
     doc.setFillColor(248, 250, 252);
-    doc.rect(14, y, 182, 10, 'F');
-    doc.setFontSize(9);
+    doc.rect(14, y, 182, 8, 'F');
+    doc.setFontSize(8.5);
     doc.setFont('helvetica', 'italic');
     doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
-    doc.text('No repayments recorded yet for this transaction.', 18, y + 6.5);
-    y += 10;
+    doc.text('No repayments recorded yet for this customer.', 18, y + 5.5);
+    y += 8;
   } else {
-    payments.forEach((p: RepaymentLog, index: number) => {
-      currentBal -= p.amount;
+    allPayments.forEach((p, index) => {
+      if (y > 265) {
+        doc.addPage();
+        y = 20;
+        drawPaymentHeader(y);
+        y += 7.5;
+      }
 
-      // Alternating row background
       if (index % 2 === 0) {
         doc.setFillColor(248, 250, 252);
-        doc.rect(14, y, 182, 8, 'F');
+        doc.rect(14, y, 182, 7, 'F');
       }
 
       doc.setFontSize(8);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(darkNavy[0], darkNavy[1], darkNavy[2]);
 
-      doc.text(formatDatePK(p.date), 16, y + 5.5);
-      doc.text((p.transactionId || `PAY-${p.id.slice(0, 6)}`).slice(0, 18), 45, y + 5.5);
-      doc.text(p.paymentMethod.slice(0, 14), 95, y + 5.5);
+      doc.text(formatDatePK(p.date), 16, y + 4.8);
+      doc.text(p.entryPurpose.slice(0, 22), 42, y + 4.8);
+      doc.text(p.paymentMethod.slice(0, 14), 96, y + 4.8);
+      doc.text((p.transactionId || `PAY-${p.id.slice(0, 6)}`).slice(0, 16), 130, y + 4.8);
 
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(emeraldGreen[0], emeraldGreen[1], emeraldGreen[2]);
-      doc.text(formatPKR(p.amount, profile.currency), 132, y + 5.5);
+      doc.text(formatPKR(p.amount, profile.currency), 194, y + 4.8, { align: 'right' });
 
-      doc.setTextColor(darkNavy[0], darkNavy[1], darkNavy[2]);
-      doc.text(formatPKR(Math.max(0, currentBal), profile.currency), 194, y + 5.5, { align: 'right' });
-
-      y += 8;
+      y += 7;
     });
   }
 
   // Divider Line
+  y += 4;
   doc.setDrawColor(203, 213, 225);
   doc.setLineWidth(0.5);
-  doc.line(14, y + 5, 196, y + 5);
+  doc.line(14, y, 196, y);
 
   // Footer & Stamps
-  y = Math.max(y + 25, 240);
+  if (y + 30 > 280) {
+    doc.addPage();
+    y = 20;
+  } else {
+    y += 6;
+  }
 
   // Stamp Box
   doc.setDrawColor(primaryBlue[0], primaryBlue[1], primaryBlue[2]);
   doc.setLineWidth(0.8);
-  doc.roundedRect(14, y, 80, 28, 2, 2, 'D');
+  doc.roundedRect(14, y, 80, 26, 2, 2, 'D');
 
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(primaryBlue[0], primaryBlue[1], primaryBlue[2]);
-  doc.text('VERIFIED DIGITAL STATEMENT', 18, y + 8);
+  doc.text('VERIFIED DIGITAL STATEMENT', 18, y + 7);
   doc.setFontSize(7.5);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
-  doc.text('KhataPro Official Ledger Record', 18, y + 14);
-  doc.text('Computer generated document. No signature needed.', 18, y + 20);
+  doc.text('KhataPro Official Ledger Record', 18, y + 13);
+  doc.text('Computer generated consolidated statement.', 18, y + 19);
 
   // Signature line
   doc.setDrawColor(148, 163, 184);
   doc.setLineWidth(0.4);
-  doc.line(130, y + 18, 196, y + 18);
+  doc.line(130, y + 16, 196, y + 16);
 
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(darkNavy[0], darkNavy[1], darkNavy[2]);
-  doc.text('Authorized Shop Stamp & Signature', 163, y + 24, { align: 'center' });
+  doc.text('Authorized Shop Stamp & Signature', 163, y + 22, { align: 'center' });
 
   return doc;
 }
 
-export function downloadCustomerTransactionPDF(record: UdharRecord, profile: UserProfile) {
-  const doc = generateCustomerTransactionPDF(record, profile);
-  const fileName = `KhataPro_Statement_${record.personName.replace(/\s+/g, '_')}_${record.id.slice(0, 6)}.pdf`;
+export function downloadCustomerTransactionPDF(
+  recordInput: UdharRecord | UdharRecord[],
+  profile: UserProfile
+) {
+  const doc = generateCustomerTransactionPDF(recordInput, profile);
+  const records = Array.isArray(recordInput) ? recordInput : [recordInput];
+  const personName = records[0]?.personName || 'Customer';
+  const fileName = `KhataPro_Statement_${personName.replace(/\s+/g, '_')}_${records.length}_entries.pdf`;
   doc.save(fileName);
 }
 

@@ -38,28 +38,35 @@ export const db = getFirestore(app, databaseId);
 export async function signInWithGoogle() {
   try {
     const result = await signInWithPopup(auth, googleProvider);
-    return result.user;
+    return { user: result.user, error: null };
   } catch (error: any) {
-    console.warn('Google Popup sign-in error or blocked, falling back to redirect:', error);
+    console.warn('Google Popup sign-in error or blocked:', error);
+
+    // If popup blocked or popup closed by user on mobile/Vercel, fallback to redirect
     if (
       error.code === 'auth/popup-blocked' ||
       error.code === 'auth/popup-closed-by-user' ||
       error.code === 'auth/cancelled-popup-request'
     ) {
-      await signInWithRedirect(auth, googleProvider);
-    } else {
-      throw error;
+      try {
+        await signInWithRedirect(auth, googleProvider);
+        return { user: null, redirecting: true, error: null };
+      } catch (redirectErr: any) {
+        return { user: null, redirecting: false, error: redirectErr };
+      }
     }
+
+    return { user: null, redirecting: false, error };
   }
 }
 
 export async function checkRedirectResult() {
   try {
     const result = await getRedirectResult(auth);
-    return result?.user || null;
-  } catch (err) {
+    return { user: result?.user || null, error: null };
+  } catch (err: any) {
     console.error('Error getting redirect result:', err);
-    return null;
+    return { user: null, error: err };
   }
 }
 
