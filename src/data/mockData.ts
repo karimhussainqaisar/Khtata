@@ -8,6 +8,7 @@ export const initialProfile: UserProfile = {
   isShopkeeper: true,
   pinEnabled: false,
   pinCode: '1234',
+  biometricEnabled: true,
   currency: 'Rs.',
   isDarkMode: false,
   language: 'en',

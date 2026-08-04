@@ -64,6 +64,7 @@ export interface UserProfile {
   isShopkeeper: boolean;
   pinEnabled: boolean;
   pinCode: string;
+  biometricEnabled?: boolean;
   currency: string; // 'PKR' or 'Rs'
   isDarkMode: boolean;
   language: Language;

@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import { Expense, ExpenseCategory, PaymentMethod, Language, UserProfile } from '../types';
 import { getTranslation } from '../utils/translations';
 import { formatPKR, formatDatePK, getCategoryIcon } from '../utils/formatters';
-import { Plus, Mic, Camera, Banknote, TrendingDown, TrendingUp, Filter, Tag } from 'lucide-react';
+import { Plus, Mic, Camera, Banknote, TrendingDown, TrendingUp, Filter, Tag, Trash2 } from 'lucide-react';
 
 interface ExpensesViewProps {
   expenses: Expense[];
   onOpenAddExpense: () => void;
   onOpenVoice: () => void;
   onOpenScan: () => void;
+  onDeleteExpense?: (expenseId: string) => void;
   language: Language;
   profile: UserProfile;
 }
@@ -18,11 +19,13 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
   onOpenAddExpense,
   onOpenVoice,
   onOpenScan,
+  onDeleteExpense,
   language,
   profile,
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedType, setSelectedType] = useState<'all' | 'expense' | 'income'>('all');
+  const [deleteExpenseConfirmId, setDeleteExpenseConfirmId] = useState<string | null>(null);
 
   const filteredExpenses = expenses.filter((e) => {
     if (selectedType !== 'all' && e.type !== selectedType) return false;
@@ -181,37 +184,70 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
       {/* Expense Entries List */}
       <div className="space-y-2.5">
         {filteredExpenses.map((item) => (
-          <div
-            key={item.id}
-            className="p-3.5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 shadow-sm flex items-center justify-between"
-          >
-            <div className="flex items-center space-x-3 rtl:space-x-reverse">
-              <div className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-xl shadow-inner">
-                {getCategoryIcon(item.category)}
+          <div key={item.id} className="space-y-1">
+            <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 shadow-sm flex items-center justify-between">
+              <div className="flex items-center space-x-3 rtl:space-x-reverse">
+                <div className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-xl shadow-inner">
+                  {getCategoryIcon(item.category)}
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-slate-900 dark:text-white">{item.title}</h4>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    {item.category} • <span className="font-semibold text-slate-700 dark:text-slate-300">{item.paymentMethod}</span>
+                  </p>
+                  {item.receiptPhotoUrl && (
+                    <span className="inline-block mt-0.5 text-[9px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950 px-1.5 py-0.2 rounded">
+                      📷 Receipt attached
+                    </span>
+                  )}
+                </div>
               </div>
-              <div>
-                <h4 className="text-xs font-bold text-slate-900 dark:text-white">{item.title}</h4>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  {item.category} • <span className="font-semibold text-slate-700 dark:text-slate-300">{item.paymentMethod}</span>
-                </p>
-                {item.receiptPhotoUrl && (
-                  <span className="inline-block mt-0.5 text-[9px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950 px-1.5 py-0.2 rounded">
-                    📷 Receipt attached
-                  </span>
-                )}
+
+              <div className="flex items-center gap-2">
+                <div className="text-right">
+                  <div
+                    className={`text-sm font-black ${
+                      item.type === 'expense' ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'
+                    }`}
+                  >
+                    {item.type === 'expense' ? '-' : '+'} {formatPKR(item.amount, profile.currency)}
+                  </div>
+                  <span className="text-[10px] text-slate-400 block">{formatDatePK(item.date)}</span>
+                </div>
+
+                <button
+                  onClick={() => setDeleteExpenseConfirmId(deleteExpenseConfirmId === item.id ? null : item.id)}
+                  className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/60 transition-colors"
+                  title="Delete Entry"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
             </div>
 
-            <div className="text-right">
-              <div
-                className={`text-sm font-black ${
-                  item.type === 'expense' ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'
-                }`}
-              >
-                {item.type === 'expense' ? '-' : '+'} {formatPKR(item.amount, profile.currency)}
+            {/* Expense Delete Confirmation */}
+            {deleteExpenseConfirmId === item.id && (
+              <div className="p-2.5 bg-rose-50 dark:bg-rose-950/90 rounded-2xl border border-rose-200 dark:border-rose-800 flex items-center justify-between text-xs text-rose-900 dark:text-rose-200 font-semibold animate-in fade-in">
+                <span>Delete "{item.title}" ({formatPKR(item.amount, profile.currency)})?</span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setDeleteExpenseConfirmId(null)}
+                    className="px-2.5 py-1 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 text-[11px] font-bold"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      onDeleteExpense?.(item.id);
+                      setDeleteExpenseConfirmId(null);
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-rose-600 text-white text-[11px] font-bold shadow-sm"
+                  >
+                    Confirm Delete
+                  </button>
+                </div>
               </div>
-              <span className="text-[10px] text-slate-400 block">{formatDatePK(item.date)}</span>
-            </div>
+            )}
           </div>
         ))}
       </div>

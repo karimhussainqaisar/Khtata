@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { UserProfile, Language } from '../types';
 import { getTranslation } from '../utils/translations';
 import { resetToDemoData } from '../utils/storage';
-import { User, Store, Lock, Globe, Moon, Sun, RefreshCw, ShieldCheck, Check, Phone, DollarSign } from 'lucide-react';
+import { User, Store, Lock, Globe, Moon, Sun, RefreshCw, ShieldCheck, Check, Phone, DollarSign, Fingerprint } from 'lucide-react';
 
 interface ProfileViewProps {
   profile: UserProfile;
@@ -23,6 +23,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [isShopkeeper, setIsShopkeeper] = useState(profile.isShopkeeper);
   const [pinEnabled, setPinEnabled] = useState(profile.pinEnabled);
   const [pinCode, setPinCode] = useState(profile.pinCode || '1234');
+  const [biometricEnabled, setBiometricEnabled] = useState(profile.biometricEnabled ?? true);
   const [currency, setCurrency] = useState(profile.currency || 'Rs.');
   const [budget, setBudget] = useState(profile.monthlyBudget.toString());
   const [saved, setSaved] = useState(false);
@@ -36,6 +37,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       isShopkeeper,
       pinEnabled,
       pinCode,
+      biometricEnabled,
       currency,
       monthlyBudget: parseFloat(budget) || 85000,
     });
@@ -178,6 +180,29 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               />
             </div>
           )}
+
+          {/* Biometric Unlock */}
+          <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-700/50">
+            <div>
+              <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                <Fingerprint className="w-4 h-4 text-emerald-500" /> Biometric Unlock (Fingerprint / Face ID)
+              </span>
+              <p className="text-[11px] text-slate-400">Enable fast biometric access on supported devices</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setBiometricEnabled(!biometricEnabled)}
+              className={`w-11 h-6 rounded-full transition-colors p-0.5 ${
+                biometricEnabled ? 'bg-emerald-600' : 'bg-slate-300 dark:bg-slate-700'
+              }`}
+            >
+              <div
+                className={`w-5 h-5 rounded-full bg-white transition-transform ${
+                  biometricEnabled ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
 
           {/* Currency Display */}
           <div>

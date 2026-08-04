@@ -151,6 +151,49 @@ export default function App() {
     });
   };
 
+  const handleDeleteUdharRecord = (udharId: string) => {
+    setUdharRecords((prev) => prev.filter((r) => r.id !== udharId));
+  };
+
+  const handleDeletePayment = (udharId: string, paymentId: string) => {
+    setUdharRecords((prev) =>
+      prev.map((r) => {
+        if (r.id !== udharId) return r;
+        const targetPayment = r.payments.find((p) => p.id === paymentId);
+        if (!targetPayment) return r;
+
+        const updatedPayments = r.payments.filter((p) => p.id !== paymentId);
+        const newPaidAmount = Math.max(0, r.paidAmount - targetPayment.amount);
+        const remaining = Math.max(0, r.amount - newPaidAmount);
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        let status = r.status;
+        if (remaining === 0) {
+          status = 'fully_paid';
+        } else if (new Date(r.dueDate) < today) {
+          status = 'overdue';
+        } else if (newPaidAmount > 0) {
+          status = 'partially_paid';
+        } else {
+          status = 'pending';
+        }
+
+        return {
+          ...r,
+          paidAmount: newPaidAmount,
+          status,
+          payments: updatedPayments,
+        };
+      })
+    );
+  };
+
+  const handleDeleteExpense = (expenseId: string) => {
+    setExpenses((prev) => prev.filter((e) => e.id !== expenseId));
+  };
+
   const handleResetDemo = () => {
     const res = resetToDemoData();
     setProfile(res.profile);
@@ -232,6 +275,8 @@ export default function App() {
             onOpenRecordPayment={openRecordPayment}
             onOpenWhatsAppReminder={openWhatsAppReminder}
             onOpenWhatsAppShare={openWhatsAppShare}
+            onDeleteUdharRecord={handleDeleteUdharRecord}
+            onDeletePayment={handleDeletePayment}
             language={profile.language}
             profile={profile}
           />
@@ -243,6 +288,7 @@ export default function App() {
             onOpenAddExpense={() => setIsAddExpenseOpen(true)}
             onOpenVoice={() => setIsVoiceOpen(true)}
             onOpenScan={() => setIsScanOpen(true)}
+            onDeleteExpense={handleDeleteExpense}
             language={profile.language}
             profile={profile}
           />

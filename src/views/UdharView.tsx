@@ -18,6 +18,7 @@ import {
   ChevronUp,
   Receipt,
   FileText,
+  Trash2,
 } from 'lucide-react';
 
 interface UdharViewProps {
@@ -26,6 +27,8 @@ interface UdharViewProps {
   onOpenRecordPayment: (record: UdharRecord) => void;
   onOpenWhatsAppReminder: (record: UdharRecord) => void;
   onOpenWhatsAppShare: (record: UdharRecord) => void;
+  onDeleteUdharRecord?: (recordId: string) => void;
+  onDeletePayment?: (udharId: string, paymentId: string) => void;
   language: Language;
   profile: UserProfile;
 }
@@ -36,6 +39,8 @@ export const UdharView: React.FC<UdharViewProps> = ({
   onOpenRecordPayment,
   onOpenWhatsAppReminder,
   onOpenWhatsAppShare,
+  onDeleteUdharRecord,
+  onDeletePayment,
   language,
   profile,
 }) => {
@@ -43,6 +48,8 @@ export const UdharView: React.FC<UdharViewProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [deletePaymentConfirm, setDeletePaymentConfirm] = useState<{ udharId: string; paymentId: string } | null>(null);
 
   const filteredRecords = udharRecords.filter((r) => {
     if (r.type !== activeType) return false;
@@ -281,11 +288,47 @@ export const UdharView: React.FC<UdharViewProps> = ({
                         </button>
                       )}
 
+                      {/* Delete Customer Button */}
+                      <button
+                        onClick={() => setDeleteConfirmId(deleteConfirmId === record.id ? null : record.id)}
+                        className="p-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-xs flex items-center gap-1 font-semibold transition-colors"
+                        title="Delete Customer Entry"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+
                       <div className="text-slate-400 pl-1">
                         {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                       </div>
                     </div>
                   </div>
+
+                  {/* Customer Deletion Confirmation Banner */}
+                  {deleteConfirmId === record.id && (
+                    <div
+                      className="p-3 bg-rose-50 dark:bg-rose-950/90 border-t border-rose-200 dark:border-rose-800 flex items-center justify-between text-xs font-semibold text-rose-900 dark:text-rose-200 animate-in fade-in"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <span>Delete customer record for <strong>{record.personName}</strong>?</span>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setDeleteConfirmId(null)}
+                          className="px-2.5 py-1 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 text-[11px] font-bold"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={() => {
+                            onDeleteUdharRecord?.(record.id);
+                            setDeleteConfirmId(null);
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold shadow-sm"
+                        >
+                          Confirm Delete
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* EXPANDED LEDGER STATEMENT */}
@@ -308,21 +351,59 @@ export const UdharView: React.FC<UdharViewProps> = ({
                       </div>
 
                       {record.payments.map((p) => (
-                        <div
-                          key={p.id}
-                          className="p-2.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/50 text-xs flex justify-between items-center"
-                        >
-                          <div>
-                            <span className="font-bold text-emerald-800 dark:text-emerald-300">
-                              Payment via {p.paymentMethod}
-                            </span>
-                            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 block">
-                              {formatDatePK(p.date)} • Tx: {p.transactionId}
-                            </span>
+                        <div key={p.id} className="space-y-1">
+                          <div className="p-2.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/50 text-xs flex justify-between items-center">
+                            <div>
+                              <span className="font-bold text-emerald-800 dark:text-emerald-300">
+                                Payment via {p.paymentMethod}
+                              </span>
+                              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 block">
+                                {formatDatePK(p.date)} • Tx: {p.transactionId}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <span className="font-extrabold text-emerald-700 dark:text-emerald-300">
+                                - {formatPKR(p.amount, profile.currency)}
+                              </span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeletePaymentConfirm(
+                                    deletePaymentConfirm?.paymentId === p.id ? null : { udharId: record.id, paymentId: p.id }
+                                  );
+                                }}
+                                className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-100/70 dark:hover:bg-rose-950/60 transition-colors"
+                                title="Delete Payment Record"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </div>
-                          <span className="font-extrabold text-emerald-700 dark:text-emerald-300">
-                            - {formatPKR(p.amount, profile.currency)}
-                          </span>
+
+                          {/* Payment Delete Confirmation */}
+                          {deletePaymentConfirm?.udharId === record.id && deletePaymentConfirm?.paymentId === p.id && (
+                            <div className="p-2.5 bg-rose-100 dark:bg-rose-950/90 rounded-xl border border-rose-300 dark:border-rose-800 flex items-center justify-between text-xs text-rose-900 dark:text-rose-200 font-semibold animate-in fade-in">
+                              <span>Delete payment of {formatPKR(p.amount, profile.currency)}?</span>
+                              <div className="flex gap-1.5">
+                                <button
+                                  onClick={() => setDeletePaymentConfirm(null)}
+                                  className="px-2.5 py-1 rounded-md bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-bold"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    onDeletePayment?.(record.id, p.id);
+                                    setDeletePaymentConfirm(null);
+                                  }}
+                                  className="px-2.5 py-1 rounded-md bg-rose-600 text-white text-[10px] font-bold shadow-sm"
+                                >
+                                  Delete Payment
+                                </button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
