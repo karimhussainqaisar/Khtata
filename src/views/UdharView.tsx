@@ -24,6 +24,9 @@ import {
   Trash2,
   Camera,
   Download,
+  X,
+  RotateCcw,
+  Filter,
 } from 'lucide-react';
 
 interface UdharViewProps {
@@ -56,11 +59,23 @@ export const UdharView: React.FC<UdharViewProps> = ({
   const [activeType, setActiveType] = useState<UdharType>('given');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [dateRange, setDateRange] = useState<'all' | 'today' | 'week' | 'month'>('all');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [deletePaymentConfirm, setDeletePaymentConfirm] = useState<{ udharId: string; paymentId: string } | null>(null);
   const [selectedPdfRecord, setSelectedPdfRecord] = useState<UdharRecord | null>(null);
   const theme = getThemePresetConfig(profile.themePreset);
+
+  const hasActiveFilters =
+    searchTerm.trim() !== '' ||
+    statusFilter !== 'all' ||
+    dateRange !== 'all';
+
+  const resetFilters = () => {
+    setSearchTerm('');
+    setStatusFilter('all');
+    setDateRange('all');
+  };
 
   const filteredRecords = udharRecords.filter((r) => {
     if (r.type !== activeType) return false;
@@ -69,17 +84,32 @@ export const UdharView: React.FC<UdharViewProps> = ({
       const q = searchTerm.toLowerCase();
       const nameMatch = r.personName.toLowerCase().includes(q);
       const phoneMatch = r.phone.includes(q);
-      if (!nameMatch && !phoneMatch) return false;
+      const purposeMatch = r.purpose?.toLowerCase().includes(q);
+      const notesMatch = r.notes?.toLowerCase().includes(q);
+      const amountMatch = r.amount.toString().includes(q) || (r.amount - r.paidAmount).toString().includes(q);
+      if (!nameMatch && !phoneMatch && !purposeMatch && !notesMatch && !amountMatch) return false;
     }
 
     if (statusFilter === 'pending') {
-      return r.status === 'pending' || r.status === 'partially_paid';
+      if (r.status !== 'pending' && r.status !== 'partially_paid') return false;
+    } else if (statusFilter === 'overdue') {
+      if (r.status !== 'overdue') return false;
+    } else if (statusFilter === 'paid') {
+      if (r.status !== 'fully_paid') return false;
     }
-    if (statusFilter === 'overdue') {
-      return r.status === 'overdue';
-    }
-    if (statusFilter === 'paid') {
-      return r.status === 'fully_paid';
+
+    if (dateRange !== 'all') {
+      const itemDate = new Date(r.date);
+      const now = new Date();
+      if (dateRange === 'today') {
+        if (itemDate.toDateString() !== now.toDateString()) return false;
+      } else if (dateRange === 'week') {
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(now.getDate() - 7);
+        if (itemDate < sevenDaysAgo) return false;
+      } else if (dateRange === 'month') {
+        if (itemDate.getMonth() !== now.getMonth() || itemDate.getFullYear() !== now.getFullYear()) return false;
+      }
     }
 
     return true;
@@ -152,51 +182,113 @@ export const UdharView: React.FC<UdharViewProps> = ({
       </div>
 
       {/* Search & Filter Bar */}
-      <div className="space-y-2">
+      <div className="p-3 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-sm space-y-3">
         <div className="relative">
           <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder={getTranslation(language, 'searchPlaceholder')}
-            className="w-full pl-9 pr-3 py-2.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm"
+            placeholder={getTranslation(language, 'searchPlaceholder') + " (Name, phone, note...)"}
+            className="w-full pl-9 pr-9 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/80 text-slate-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-inner"
           />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm('')}
+              className="absolute right-3 top-2.5 p-0.5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
-        {/* Filter Pills */}
-        <div className="flex items-center space-x-1.5 rtl:space-x-reverse overflow-x-auto pb-1">
-          {['all', 'pending', 'overdue', 'paid'].map((f) => (
-            <button
-              key={f}
-              onClick={() => setStatusFilter(f)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold capitalize whitespace-nowrap transition-all ${
-                statusFilter === f
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
-              }`}
-            >
-              {f === 'all'
-                ? getTranslation(language, 'filterAll')
-                : f === 'pending'
-                ? getTranslation(language, 'filterPending')
-                : f === 'overdue'
-                ? getTranslation(language, 'filterOverdue')
-                : getTranslation(language, 'filterPaid')}
-            </button>
-          ))}
+        {/* Filter Chips & Reset Button */}
+        <div className="space-y-2 pt-1 border-t border-slate-100 dark:border-slate-700/60">
+          <div className="flex items-center justify-between gap-2">
+            {/* Status Filter Pills */}
+            <div className="flex items-center space-x-1.5 rtl:space-x-reverse overflow-x-auto pb-1 flex-1">
+              <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1 whitespace-nowrap pr-1">
+                <Filter className="w-3 h-3" /> Status:
+              </span>
+              {['all', 'pending', 'overdue', 'paid'].map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setStatusFilter(f)}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold capitalize whitespace-nowrap transition-all ${
+                    statusFilter === f
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'bg-slate-100 dark:bg-slate-900/60 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  {f === 'all'
+                    ? getTranslation(language, 'filterAll')
+                    : f === 'pending'
+                    ? getTranslation(language, 'filterPending')
+                    : f === 'overdue'
+                    ? getTranslation(language, 'filterOverdue')
+                    : getTranslation(language, 'filterPaid')}
+                </button>
+              ))}
+            </div>
+
+            {hasActiveFilters && (
+              <button
+                onClick={resetFilters}
+                className="px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 font-bold text-xs transition-colors flex items-center gap-1 whitespace-nowrap"
+                title="Reset filters"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Reset</span>
+              </button>
+            )}
+          </div>
+
+          {/* Date Range Chips */}
+          <div className="flex items-center space-x-1.5 rtl:space-x-reverse overflow-x-auto pb-1 text-xs">
+            <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1 whitespace-nowrap pr-1">
+              <Calendar className="w-3 h-3" /> Date:
+            </span>
+            {[
+              { id: 'all', label: 'All Time' },
+              { id: 'today', label: 'Today' },
+              { id: 'week', label: 'This Week' },
+              { id: 'month', label: 'This Month' },
+            ].map((d) => (
+              <button
+                key={d.id}
+                onClick={() => setDateRange(d.id as any)}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-all ${
+                  dateRange === d.id
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'bg-slate-100 dark:bg-slate-900/60 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                }`}
+              >
+                {d.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       {/* Record List */}
       <div className="space-y-3">
         {filteredRecords.length === 0 ? (
-          <div className="p-8 text-center bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700">
-            <FileText className="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-2" />
-            <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300">No Udhar records found</h4>
-            <p className="text-xs text-slate-400 mt-1">
-              Tap "+ Add Record" to add your first customer or credit entry.
-            </p>
+          <div className="p-8 text-center bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 space-y-3">
+            <FileText className="w-10 h-10 mx-auto text-slate-300 dark:text-slate-600" />
+            <div>
+              <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300">No Udhar records found</h4>
+              <p className="text-xs text-slate-400 mt-1">
+                Try adjusting your search term, status filter, or date range.
+              </p>
+            </div>
+            {hasActiveFilters && (
+              <button
+                onClick={resetFilters}
+                className="px-3.5 py-1.5 rounded-xl bg-indigo-100 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-300 font-bold text-xs hover:bg-indigo-200 transition-colors inline-flex items-center gap-1"
+              >
+                <RotateCcw className="w-3.5 h-3.5" /> Reset Filters
+              </button>
+            )}
           </div>
         ) : (
           filteredRecords.map((record) => {
