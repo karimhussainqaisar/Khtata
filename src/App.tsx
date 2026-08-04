@@ -374,6 +374,7 @@ export default function App() {
         payment={selectedPaymentForReceipt}
         language={profile.language}
         shopName={profile.shopName || profile.name}
+        profile={profile}
       />
 
       <KhataAiDrawer

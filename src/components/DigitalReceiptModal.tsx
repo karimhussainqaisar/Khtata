@@ -1,9 +1,10 @@
 import React, { useRef, useState } from 'react';
-import { UdharRecord, RepaymentLog, Language } from '../types';
+import { UdharRecord, RepaymentLog, Language, UserProfile } from '../types';
 import { formatPKR, formatDatePK } from '../utils/formatters';
 import { generatePaymentReceiptMessage, getWhatsAppLink } from '../utils/whatsapp';
 import { downloadReceiptImage, shareReceiptImage } from '../utils/receiptImage';
-import { X, Share2, Download, CheckCircle, ShieldCheck, Printer, Image as ImageIcon, Send } from 'lucide-react';
+import { downloadCustomerTransactionPDF } from '../utils/pdfGenerator';
+import { X, Share2, Download, CheckCircle, ShieldCheck, Printer, Image as ImageIcon, Send, FileText } from 'lucide-react';
 
 interface DigitalReceiptModalProps {
   isOpen: boolean;
@@ -12,6 +13,7 @@ interface DigitalReceiptModalProps {
   payment: RepaymentLog | null;
   language: Language;
   shopName: string;
+  profile?: UserProfile;
 }
 
 export const DigitalReceiptModal: React.FC<DigitalReceiptModalProps> = ({
@@ -21,6 +23,7 @@ export const DigitalReceiptModal: React.FC<DigitalReceiptModalProps> = ({
   payment,
   language,
   shopName,
+  profile,
 }) => {
   const receiptRef = useRef<HTMLDivElement>(null);
   const [sharingImage, setSharingImage] = useState(false);
@@ -43,6 +46,21 @@ export const DigitalReceiptModal: React.FC<DigitalReceiptModalProps> = ({
 
   const handleDownloadImage = () => {
     downloadReceiptImage(record, payment, shopName);
+  };
+
+  const handleDownloadPdf = () => {
+    downloadCustomerTransactionPDF(record, profile || {
+      name: shopName,
+      shopName: shopName,
+      phone: record.phone,
+      isShopkeeper: true,
+      pinEnabled: false,
+      pinCode: '1234',
+      currency: 'Rs',
+      isDarkMode: false,
+      language: language,
+      monthlyBudget: 50000,
+    });
   };
 
   const handlePrint = () => {
@@ -144,6 +162,13 @@ export const DigitalReceiptModal: React.FC<DigitalReceiptModalProps> = ({
 
           <div className="grid grid-cols-3 gap-2">
             <button
+              onClick={handleDownloadPdf}
+              className="py-2 px-2 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-bold text-[11px] hover:bg-indigo-100 dark:hover:bg-indigo-900/50 flex items-center justify-center gap-1 transition-colors"
+              title="Export Customer PDF Statement"
+            >
+              <FileText className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" /> Export PDF
+            </button>
+            <button
               onClick={handleDownloadImage}
               className="py-2 px-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-bold text-[11px] hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center gap-1 transition-colors"
               title="Download Image File"
@@ -155,13 +180,7 @@ export const DigitalReceiptModal: React.FC<DigitalReceiptModalProps> = ({
               className="py-2 px-2 rounded-xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-bold text-[11px] hover:bg-emerald-100 dark:hover:bg-emerald-900/50 flex items-center justify-center gap-1 transition-colors"
               title="WhatsApp Text Statement"
             >
-              <Send className="w-3.5 h-3.5" /> Text Msg
-            </button>
-            <button
-              onClick={handlePrint}
-              className="py-2 px-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-bold text-[11px] hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center gap-1 transition-colors"
-            >
-              <Printer className="w-3.5 h-3.5" /> Print
+              <Send className="w-3.5 h-3.5" /> WhatsApp
             </button>
           </div>
         </div>

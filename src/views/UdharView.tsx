@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { UdharRecord, UdharType, UdharStatus, Language, UserProfile, RepaymentLog } from '../types';
 import { getTranslation } from '../utils/translations';
 import { formatPKR, formatDatePK, getDaysRemainingOrOverdue } from '../utils/formatters';
+import { CustomerPdfModal } from '../components/CustomerPdfModal';
 import {
   Search,
   Plus,
@@ -20,6 +21,7 @@ import {
   FileText,
   Trash2,
   Camera,
+  Download,
 } from 'lucide-react';
 
 interface UdharViewProps {
@@ -55,6 +57,7 @@ export const UdharView: React.FC<UdharViewProps> = ({
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [deletePaymentConfirm, setDeletePaymentConfirm] = useState<{ udharId: string; paymentId: string } | null>(null);
+  const [selectedPdfRecord, setSelectedPdfRecord] = useState<UdharRecord | null>(null);
 
   const filteredRecords = udharRecords.filter((r) => {
     if (r.type !== activeType) return false;
@@ -292,6 +295,16 @@ export const UdharView: React.FC<UdharViewProps> = ({
 
                     {/* Quick Buttons */}
                     <div className="flex items-center space-x-1.5 rtl:space-x-reverse" onClick={(e) => e.stopPropagation()}>
+                      {/* PDF Export Button */}
+                      <button
+                        onClick={() => setSelectedPdfRecord(record)}
+                        className="p-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 text-xs flex items-center gap-1 font-semibold"
+                        title="Export PDF Statement"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline text-[11px]">PDF</span>
+                      </button>
+
                       {/* Share WhatsApp */}
                       <button
                         onClick={() => onOpenWhatsAppShare(record)}
@@ -455,10 +468,18 @@ export const UdharView: React.FC<UdharViewProps> = ({
 
                     <div className="pt-2 flex justify-end gap-2">
                       <button
+                        onClick={() => setSelectedPdfRecord(record)}
+                        className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-sm flex items-center gap-1.5"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Export Customer PDF (پی ڈی ایف)</span>
+                      </button>
+
+                      <button
                         onClick={() => onOpenWhatsAppShare(record)}
                         className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-bold shadow-sm"
                       >
-                        Share Full Ledger PDF / WA
+                        Share Full Ledger / WA
                       </button>
                     </div>
                   </div>
@@ -468,6 +489,14 @@ export const UdharView: React.FC<UdharViewProps> = ({
           })
         )}
       </div>
+
+      {/* Customer PDF Modal */}
+      <CustomerPdfModal
+        isOpen={!!selectedPdfRecord}
+        onClose={() => setSelectedPdfRecord(null)}
+        record={selectedPdfRecord}
+        profile={profile}
+      />
     </div>
   );
 };
