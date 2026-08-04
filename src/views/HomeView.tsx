@@ -95,7 +95,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
       </div>
 
       {/* Main 4 Metric Cards */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {/* Total Money Given (Maine Diya) */}
         <div className="p-5 rounded-3xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 shadow-sm relative overflow-hidden group">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs mb-1">

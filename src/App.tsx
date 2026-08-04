@@ -383,7 +383,7 @@ export default function App() {
   };
 
   return (
-    <div className={`min-h-screen font-sans bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors ${profile.language === 'ur' ? 'font-urdu' : ''}`}>
+    <div className={`min-h-screen font-sans bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors w-full overflow-x-hidden ${profile.language === 'ur' ? 'font-urdu' : ''}`}>
       {/* Security PIN Lock Overlay */}
       <PinLockModal
         isLocked={isLocked}
@@ -405,7 +405,7 @@ export default function App() {
       />
 
       {/* Main Content View Container */}
-      <main className="max-w-md mx-auto px-4 pt-4 pb-12">
+      <main className="max-w-md md:max-w-2xl lg:max-w-4xl mx-auto px-3 sm:px-4 pt-3 sm:pt-4 pb-28 min-h-[calc(100vh-64px)] overflow-x-hidden">
         {activeTab === 'home' && (
           <HomeView
             summary={summary}

@@ -19,19 +19,19 @@ export const GoogleAuthBanner: React.FC<GoogleAuthBannerProps> = ({
   language = 'en',
 }) => {
   return (
-    <div className="p-4 rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white shadow-lg border border-indigo-500/30 space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3 rtl:space-x-reverse">
+    <div className="p-3.5 sm:p-4 rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white shadow-lg border border-indigo-500/30 space-y-3 overflow-hidden w-full">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center space-x-2.5 sm:space-x-3 rtl:space-x-reverse min-w-0 shrink">
           {user ? (
-            <div className="relative">
+            <div className="relative shrink-0">
               {user.photoURL ? (
                 <img
                   src={user.photoURL}
                   alt={user.displayName || 'User'}
-                  className="w-11 h-11 rounded-2xl border-2 border-indigo-400 object-cover shadow-md"
+                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl border-2 border-indigo-400 object-cover shadow-md"
                 />
               ) : (
-                <div className="w-11 h-11 rounded-2xl bg-indigo-600 flex items-center justify-center text-white font-bold text-lg">
+                <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-indigo-600 flex items-center justify-center text-white font-bold text-lg">
                   {(user.displayName || user.email || 'G').charAt(0).toUpperCase()}
                 </div>
               )}
@@ -40,30 +40,30 @@ export const GoogleAuthBanner: React.FC<GoogleAuthBannerProps> = ({
               </div>
             </div>
           ) : (
-            <div className="w-11 h-11 rounded-2xl bg-white/10 flex items-center justify-center text-amber-300 border border-white/20">
-              <Cloud className="w-6 h-6 animate-pulse" />
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-white/10 flex items-center justify-center text-amber-300 border border-white/20 shrink-0">
+              <Cloud className="w-5 h-5 sm:w-6 sm:h-6 animate-pulse" />
             </div>
           )}
 
-          <div>
+          <div className="min-w-0">
             {user ? (
               <>
-                <div className="flex items-center gap-1.5">
-                  <h3 className="text-sm font-bold text-white leading-tight">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <h3 className="text-xs sm:text-sm font-bold text-white leading-tight truncate">
                     {user.displayName || 'Google Account'}
                   </h3>
-                  <span className="px-1.5 py-0.2 rounded text-[10px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                    CLOUD SYNC ACTIVE
+                  <span className="px-1.5 py-0.2 rounded text-[9px] sm:text-[10px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shrink-0">
+                    CLOUD SYNC
                   </span>
                 </div>
-                <p className="text-[11px] text-indigo-200 truncate max-w-[200px]">{user.email}</p>
+                <p className="text-[10px] sm:text-[11px] text-indigo-200 truncate max-w-[150px] sm:max-w-[220px]">{user.email}</p>
               </>
             ) : (
               <>
-                <h3 className="text-sm font-bold text-white leading-tight">
+                <h3 className="text-xs sm:text-sm font-bold text-white leading-tight">
                   {language === 'ur' ? 'گوگل سے لاگ ان کریں' : 'Google Data Sync & Backup'}
                 </h3>
-                <p className="text-[11px] text-slate-300">
+                <p className="text-[10px] sm:text-[11px] text-slate-300 line-clamp-2">
                   {language === 'ur'
                     ? 'اپنا سارا ادھار اور خرچ کا ڈیٹا گوگل کلائوڈ پر محفوظ رکھیں'
                     : 'Sync all Udhar records & expenses safely to your Google account'}
@@ -77,7 +77,7 @@ export const GoogleAuthBanner: React.FC<GoogleAuthBannerProps> = ({
           <button
             onClick={onLogout}
             disabled={loading}
-            className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold text-xs transition-all flex items-center gap-1.5"
+            className="px-2.5 py-1.5 sm:px-3 rounded-xl bg-white/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold text-xs transition-all flex items-center gap-1.5 shrink-0"
             title="Sign Out Google Account"
           >
             <LogOut className="w-3.5 h-3.5" />
@@ -87,7 +87,7 @@ export const GoogleAuthBanner: React.FC<GoogleAuthBannerProps> = ({
           <button
             onClick={onLogin}
             disabled={loading}
-            className="px-3.5 py-2 rounded-2xl bg-white text-slate-900 hover:bg-slate-100 font-extrabold text-xs shadow-md transition-all active:scale-95 flex items-center gap-2"
+            className="px-3 py-2 sm:px-3.5 rounded-2xl bg-white text-slate-900 hover:bg-slate-100 font-extrabold text-xs shadow-md transition-all active:scale-95 flex items-center gap-1.5 shrink-0"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24">
               <path
