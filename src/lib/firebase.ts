@@ -124,6 +124,26 @@ export function listenToUserProfile(userId: string, callback: (profile: Partial<
   );
 }
 
+// Helper to remove any undefined fields before sending to Firestore
+function cleanForFirestore<T extends Record<string, any>>(obj: T): Record<string, any> {
+  const result: Record<string, any> = {};
+  Object.keys(obj).forEach((key) => {
+    const val = obj[key];
+    if (val !== undefined) {
+      if (val !== null && typeof val === 'object' && !Array.isArray(val)) {
+        result[key] = cleanForFirestore(val);
+      } else if (Array.isArray(val)) {
+        result[key] = val.map((item) =>
+          item !== null && typeof item === 'object' ? cleanForFirestore(item) : item
+        );
+      } else {
+        result[key] = val;
+      }
+    }
+  });
+  return result;
+}
+
 // Single Item Mutations in Firestore
 export async function saveUdharRecordToCloud(userId: string, record: UdharRecord) {
   try {
@@ -132,7 +152,12 @@ export async function saveUdharRecordToCloud(userId: string, record: UdharRecord
     if (profilePhoto && profilePhoto.length > 100000) {
       profilePhoto = await compressImage(profilePhoto, 250, 250, 0.7);
     }
-    await setDoc(docRef, { ...record, profilePhoto, userId });
+    const payload = cleanForFirestore({
+      ...record,
+      ...(profilePhoto ? { profilePhoto } : {}),
+      userId,
+    });
+    await setDoc(docRef, payload);
   } catch (err) {
     console.error('Error saving Udhar to Firestore:', err);
   }
@@ -154,7 +179,12 @@ export async function saveExpenseToCloud(userId: string, expense: Expense) {
     if (receiptPhotoUrl && receiptPhotoUrl.length > 100000) {
       receiptPhotoUrl = await compressImage(receiptPhotoUrl, 300, 300, 0.7);
     }
-    await setDoc(docRef, { ...expense, receiptPhotoUrl, userId });
+    const payload = cleanForFirestore({
+      ...expense,
+      ...(receiptPhotoUrl ? { receiptPhotoUrl } : {}),
+      userId,
+    });
+    await setDoc(docRef, payload);
   } catch (err) {
     console.error('Error saving Expense to Firestore:', err);
   }
@@ -176,7 +206,12 @@ export async function saveProfileToCloud(userId: string, profile: UserProfile) {
     if (avatar && avatar.length > 100000) {
       avatar = await compressImage(avatar, 250, 250, 0.7);
     }
-    await setDoc(docRef, { ...profile, avatar, userId });
+    const payload = cleanForFirestore({
+      ...profile,
+      ...(avatar ? { avatar } : {}),
+      userId,
+    });
+    await setDoc(docRef, payload);
   } catch (err) {
     console.error('Error saving Profile to Firestore:', err);
   }
@@ -198,7 +233,10 @@ export async function syncLocalDataToCloud(
       avatar = await compressImage(avatar, 250, 250, 0.7);
     }
     const profileRef = doc(db, 'userProfiles', userId);
-    batch.set(profileRef, { ...profile, avatar, userId });
+    batch.set(
+      profileRef,
+      cleanForFirestore({ ...profile, ...(avatar ? { avatar } : {}), userId })
+    );
 
     // Udhar records
     for (const rec of udharRecords) {
@@ -207,7 +245,10 @@ export async function syncLocalDataToCloud(
         photo = await compressImage(photo, 250, 250, 0.7);
       }
       const recRef = doc(db, 'udharRecords', rec.id);
-      batch.set(recRef, { ...rec, profilePhoto: photo, userId });
+      batch.set(
+        recRef,
+        cleanForFirestore({ ...rec, ...(photo ? { profilePhoto: photo } : {}), userId })
+      );
     }
 
     // Expenses
@@ -217,7 +258,10 @@ export async function syncLocalDataToCloud(
         receipt = await compressImage(receipt, 300, 300, 0.7);
       }
       const expRef = doc(db, 'expenses', exp.id);
-      batch.set(expRef, { ...exp, receiptPhotoUrl: receipt, userId });
+      batch.set(
+        expRef,
+        cleanForFirestore({ ...exp, ...(receipt ? { receiptPhotoUrl: receipt } : {}), userId })
+      );
     }
 
     await batch.commit();
