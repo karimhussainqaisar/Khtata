@@ -40,8 +40,22 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
   const [category, setCategory] = useState<ExpenseCategory>('Food');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Cash');
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [receiptPhotoUrl, setReceiptPhotoUrl] = useState<string>('');
 
   if (!isOpen) return null;
+
+  const handleReceiptFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setReceiptPhotoUrl(event.target.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,10 +69,12 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
       paymentMethod,
       date,
       type,
+      receiptPhotoUrl: receiptPhotoUrl || undefined,
     });
 
     setTitle('');
     setAmount('');
+    setReceiptPhotoUrl('');
     onClose();
   };
 
@@ -220,6 +236,38 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
                 onChange={(e) => setDate(e.target.value)}
                 className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
+            </div>
+          </div>
+
+          {/* Attach Receipt Image */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Attach Receipt Photo (رسید کی تصویر)
+            </label>
+            <div className="flex items-center gap-2">
+              <label className="flex-1 cursor-pointer flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border border-dashed border-indigo-300 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-950/30 hover:bg-indigo-100/60 text-indigo-700 dark:text-indigo-300 text-xs font-bold transition-all">
+                <Camera className="w-4 h-4 text-indigo-500" />
+                <span>{receiptPhotoUrl ? 'Change Receipt Photo' : 'Upload Receipt Image'}</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleReceiptFileUpload}
+                  className="hidden"
+                />
+              </label>
+
+              {receiptPhotoUrl && (
+                <div className="relative w-11 h-11 rounded-xl overflow-hidden border border-indigo-500 shadow-sm flex-shrink-0 group">
+                  <img src={receiptPhotoUrl} alt="Receipt Preview" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setReceiptPhotoUrl('')}
+                    className="absolute inset-0 bg-black/60 text-white flex items-center justify-center text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    Remove
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 

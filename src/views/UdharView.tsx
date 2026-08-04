@@ -19,6 +19,7 @@ import {
   Receipt,
   FileText,
   Trash2,
+  Camera,
 } from 'lucide-react';
 
 interface UdharViewProps {
@@ -30,6 +31,7 @@ interface UdharViewProps {
   onOpenReceipt?: (record: UdharRecord, payment: RepaymentLog) => void;
   onDeleteUdharRecord?: (recordId: string) => void;
   onDeletePayment?: (udharId: string, paymentId: string) => void;
+  onUpdateUdharRecord?: (recordId: string, updated: Partial<UdharRecord>) => void;
   language: Language;
   profile: UserProfile;
 }
@@ -43,6 +45,7 @@ export const UdharView: React.FC<UdharViewProps> = ({
   onOpenReceipt,
   onDeleteUdharRecord,
   onDeletePayment,
+  onUpdateUdharRecord,
   language,
   profile,
 }) => {
@@ -197,12 +200,41 @@ export const UdharView: React.FC<UdharViewProps> = ({
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-center space-x-3 rtl:space-x-reverse">
-                      <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center font-black text-slate-700 dark:text-slate-200 text-base overflow-hidden border border-slate-200 dark:border-slate-600">
-                        {record.profilePhoto ? (
-                          <img src={record.profilePhoto} alt={record.personName} className="w-full h-full object-cover" />
-                        ) : (
-                          record.personName.substring(0, 2).toUpperCase()
-                        )}
+                      {/* Customer Photo Avatar with quick upload camera overlay */}
+                      <div className="relative group/avatar flex-shrink-0">
+                        <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center font-black text-slate-700 dark:text-slate-200 text-base overflow-hidden border border-slate-200 dark:border-slate-600 shadow-xs">
+                          {record.profilePhoto ? (
+                            <img src={record.profilePhoto} alt={record.personName} className="w-full h-full object-cover" />
+                          ) : (
+                            record.personName.substring(0, 2).toUpperCase()
+                          )}
+                        </div>
+                        <label
+                          onClick={(e) => e.stopPropagation()}
+                          className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-md cursor-pointer hover:bg-indigo-700 hover:scale-110 transition-all border border-white dark:border-slate-800"
+                          title="Change Customer Photo"
+                        >
+                          <Camera className="w-3 h-3" />
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file && onUpdateUdharRecord) {
+                                const reader = new FileReader();
+                                reader.onload = (event) => {
+                                  if (event.target?.result) {
+                                    onUpdateUdharRecord(record.id, {
+                                      profilePhoto: event.target.result as string,
+                                    });
+                                  }
+                                };
+                                reader.readAsDataURL(file);
+                              }
+                            }}
+                          />
+                        </label>
                       </div>
                       <div>
                         <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">

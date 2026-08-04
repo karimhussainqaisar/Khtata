@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Expense, ExpenseCategory, PaymentMethod, Language, UserProfile } from '../types';
 import { getTranslation } from '../utils/translations';
 import { formatPKR, formatDatePK, getCategoryIcon } from '../utils/formatters';
-import { Plus, Mic, Camera, Banknote, TrendingDown, TrendingUp, Filter, Tag, Trash2 } from 'lucide-react';
+import { ExpenseReceiptModal } from '../components/ExpenseReceiptModal';
+import { Plus, Mic, Camera, Banknote, TrendingDown, TrendingUp, Filter, Tag, Trash2, Image as ImageIcon, ExternalLink } from 'lucide-react';
 
 interface ExpensesViewProps {
   expenses: Expense[];
@@ -26,6 +27,7 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedType, setSelectedType] = useState<'all' | 'expense' | 'income'>('all');
   const [deleteExpenseConfirmId, setDeleteExpenseConfirmId] = useState<string | null>(null);
+  const [viewReceiptExpense, setViewReceiptExpense] = useState<Expense | null>(null);
 
   const filteredExpenses = expenses.filter((e) => {
     if (selectedType !== 'all' && e.type !== selectedType) return false;
@@ -196,9 +198,14 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
                     {item.category} • <span className="font-semibold text-slate-700 dark:text-slate-300">{item.paymentMethod}</span>
                   </p>
                   {item.receiptPhotoUrl && (
-                    <span className="inline-block mt-0.5 text-[9px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950 px-1.5 py-0.2 rounded">
-                      📷 Receipt attached
-                    </span>
+                    <button
+                      onClick={() => setViewReceiptExpense(item)}
+                      className="inline-flex items-center gap-1 mt-1 text-[10px] font-extrabold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/80 hover:bg-indigo-100 dark:hover:bg-indigo-900 px-2 py-0.5 rounded-lg border border-indigo-200 dark:border-indigo-800 transition-colors shadow-xs"
+                    >
+                      <ImageIcon className="w-3 h-3 text-indigo-500" />
+                      <span>View Receipt Photo (تصویر دیکھیں)</span>
+                      <ExternalLink className="w-2.5 h-2.5 text-indigo-400" />
+                    </button>
                   )}
                 </div>
               </div>
@@ -214,6 +221,16 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
                   </div>
                   <span className="text-[10px] text-slate-400 block">{formatDatePK(item.date)}</span>
                 </div>
+
+                {item.receiptPhotoUrl && (
+                  <button
+                    onClick={() => setViewReceiptExpense(item)}
+                    className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-700 overflow-hidden border border-slate-200 dark:border-slate-600 hover:scale-105 transition-transform"
+                    title="Preview Receipt Image"
+                  >
+                    <img src={item.receiptPhotoUrl} alt="Receipt" className="w-full h-full object-cover" />
+                  </button>
+                )}
 
                 <button
                   onClick={() => setDeleteExpenseConfirmId(deleteExpenseConfirmId === item.id ? null : item.id)}
@@ -251,6 +268,14 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
           </div>
         ))}
       </div>
+
+      {/* Expense Receipt Modal */}
+      <ExpenseReceiptModal
+        isOpen={!!viewReceiptExpense}
+        onClose={() => setViewReceiptExpense(null)}
+        expense={viewReceiptExpense}
+        currency={profile.currency}
+      />
     </div>
   );
 };

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { UdharRecord, UdharType, Language } from '../types';
 import { getTranslation } from '../utils/translations';
-import { X, User, Phone, Banknote, Calendar, FileText, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import { X, User, Phone, Banknote, Calendar, FileText, ArrowUpRight, ArrowDownLeft, Camera } from 'lucide-react';
 
 interface AddUdharModalProps {
   isOpen: boolean;
@@ -28,8 +28,22 @@ export const AddUdharModal: React.FC<AddUdharModalProps> = ({
     return d.toISOString().split('T')[0];
   });
   const [purpose, setPurpose] = useState('');
+  const [profilePhoto, setProfilePhoto] = useState('');
 
   if (!isOpen) return null;
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setProfilePhoto(event.target.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,6 +58,7 @@ export const AddUdharModal: React.FC<AddUdharModalProps> = ({
       date: new Date().toISOString().split('T')[0],
       dueDate,
       purpose: purpose.trim() || (type === 'given' ? 'Grocery & Goods Udhar' : 'Personal Loan'),
+      profilePhoto: profilePhoto || undefined,
     });
 
     // Reset
@@ -51,6 +66,7 @@ export const AddUdharModal: React.FC<AddUdharModalProps> = ({
     setPhone('');
     setAmount('');
     setPurpose('');
+    setProfilePhoto('');
     onClose();
   };
 
@@ -104,21 +120,59 @@ export const AddUdharModal: React.FC<AddUdharModalProps> = ({
             </button>
           </div>
 
-          {/* Person Name */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Person / Customer Name *
-            </label>
-            <div className="relative">
-              <User className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
-              <input
-                type="text"
-                required
-                value={personName}
-                onChange={(e) => setPersonName(e.target.value)}
-                placeholder="e.g. Ahmed Khan, Bilal Mobiles"
-                className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
+          {/* Person Name & Photo Upload */}
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Person / Customer Name *
+              </label>
+              <div className="relative">
+                <User className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  required
+                  value={personName}
+                  onChange={(e) => setPersonName(e.target.value)}
+                  placeholder="e.g. Ahmed Khan, Bilal Mobiles"
+                  className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Customer Photo (گاہک کی تصویر)
+              </label>
+              <div className="flex items-center gap-3">
+                <div className="relative w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold overflow-hidden shadow-sm flex-shrink-0">
+                  {profilePhoto ? (
+                    <img src={profilePhoto} alt="Customer Preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <User className="w-6 h-6" />
+                  )}
+                </div>
+
+                <label className="flex-1 cursor-pointer py-2.5 px-3 rounded-xl border border-dashed border-indigo-300 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-950/30 hover:bg-indigo-100/60 text-indigo-700 dark:text-indigo-300 text-xs font-bold flex items-center justify-center gap-1.5 transition-all">
+                  <Camera className="w-4 h-4 text-indigo-500" />
+                  <span>{profilePhoto ? 'Change Photo' : 'Upload Customer Photo'}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoUpload}
+                    className="hidden"
+                  />
+                </label>
+
+                {profilePhoto && (
+                  <button
+                    type="button"
+                    onClick={() => setProfilePhoto('')}
+                    className="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950 rounded-xl text-xs font-bold"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 

@@ -33,8 +33,12 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Brand & User Info */}
         <div className="flex items-center space-x-3 rtl:space-x-reverse">
           <div className="relative">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-indigo-700 flex items-center justify-center text-white shadow-md shadow-blue-500/20 font-bold text-xl tracking-wider">
-              KP
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-indigo-700 flex items-center justify-center text-white shadow-md shadow-blue-500/20 font-bold text-xl tracking-wider overflow-hidden">
+              {profile.avatar ? (
+                <img src={profile.avatar} alt={profile.name} className="w-full h-full object-cover" />
+              ) : (
+                'KP'
+              )}
             </div>
             <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-900 flex items-center justify-center text-[9px] text-white font-bold">
               ✓

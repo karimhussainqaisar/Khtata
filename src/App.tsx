@@ -91,6 +91,12 @@ export default function App() {
     setProfile((prev) => ({ ...prev, ...updated }));
   };
 
+  const handleUpdateUdharRecord = (recordId: string, updated: Partial<UdharRecord>) => {
+    setUdharRecords((prev) =>
+      prev.map((r) => (r.id === recordId ? { ...r, ...updated } : r))
+    );
+  };
+
   const handleAddUdhar = (newRecordData: Omit<UdharRecord, 'id' | 'paidAmount' | 'status' | 'payments' | 'createdAt'>) => {
     const newRecord: UdharRecord = {
       ...newRecordData,
@@ -278,6 +284,7 @@ export default function App() {
             onOpenReceipt={openReceipt}
             onDeleteUdharRecord={handleDeleteUdharRecord}
             onDeletePayment={handleDeletePayment}
+            onUpdateUdharRecord={handleUpdateUdharRecord}
             language={profile.language}
             profile={profile}
           />

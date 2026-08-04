@@ -142,6 +142,7 @@ export const initialExpenses: Expense[] = [
     date: '2026-08-02',
     paymentMethod: 'Easypaisa',
     type: 'expense',
+    receiptPhotoUrl: 'https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?w=800&auto=format&fit=crop&q=80',
   },
   {
     id: 'e-2',
@@ -151,6 +152,7 @@ export const initialExpenses: Expense[] = [
     date: '2026-08-03',
     paymentMethod: 'Cash',
     type: 'expense',
+    receiptPhotoUrl: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&auto=format&fit=crop&q=80',
   },
   {
     id: 'e-3',
@@ -169,6 +171,7 @@ export const initialExpenses: Expense[] = [
     date: '2026-08-01',
     paymentMethod: 'JazzCash',
     type: 'expense',
+    receiptPhotoUrl: 'https://images.unsplash.com/photo-1527018601619-a508a2be00d6?w=800&auto=format&fit=crop&q=80',
   },
   {
     id: 'e-5',
@@ -178,6 +181,7 @@ export const initialExpenses: Expense[] = [
     date: '2026-07-28',
     paymentMethod: 'Bank Transfer',
     type: 'expense',
+    receiptPhotoUrl: 'https://images.unsplash.com/photo-1450133064473-71024230f91b?w=800&auto=format&fit=crop&q=80',
   },
   {
     id: 'e-6',
@@ -187,6 +191,7 @@ export const initialExpenses: Expense[] = [
     date: '2026-07-25',
     paymentMethod: 'Bank Transfer',
     type: 'expense',
+    receiptPhotoUrl: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=800&auto=format&fit=crop&q=80',
   },
   {
     id: 'e-7',
