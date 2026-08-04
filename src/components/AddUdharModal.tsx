@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { UdharRecord, UdharType, Language } from '../types';
 import { getTranslation } from '../utils/translations';
-import { X, User, Phone, Banknote, Calendar, FileText, ArrowUpRight, ArrowDownLeft, Camera } from 'lucide-react';
+import { ContactPickerModal } from './ContactPickerModal';
+import { X, User, Phone, Banknote, Calendar, FileText, ArrowUpRight, ArrowDownLeft, Camera, Contact, Sparkles } from 'lucide-react';
 
 interface AddUdharModalProps {
   isOpen: boolean;
@@ -29,6 +30,7 @@ export const AddUdharModal: React.FC<AddUdharModalProps> = ({
   });
   const [purpose, setPurpose] = useState('');
   const [profilePhoto, setProfilePhoto] = useState('');
+  const [isContactPickerOpen, setIsContactPickerOpen] = useState(false);
 
   if (!isOpen) return null;
 
@@ -119,6 +121,19 @@ export const AddUdharModal: React.FC<AddUdharModalProps> = ({
               <ArrowDownLeft className="w-4 h-4" /> Maine Liya (Borrowed)
             </button>
           </div>
+
+          {/* Phone Contact Fetcher Banner */}
+          <button
+            type="button"
+            onClick={() => setIsContactPickerOpen(true)}
+            className="w-full py-2.5 px-3 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/80 border border-indigo-200 dark:border-indigo-800/80 text-indigo-700 dark:text-indigo-300 text-xs font-bold flex items-center justify-between transition-all group"
+          >
+            <div className="flex items-center gap-2">
+              <Contact className="w-4 h-4 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform" />
+              <span>Fetch Customer from Mobile Contacts (کانٹیکٹس سے چنیں)</span>
+            </div>
+            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+          </button>
 
           {/* Person Name & Photo Upload */}
           <div className="space-y-3">
@@ -268,6 +283,17 @@ export const AddUdharModal: React.FC<AddUdharModalProps> = ({
           </div>
         </form>
       </div>
+
+      {/* Contact Picker Modal */}
+      <ContactPickerModal
+        isOpen={isContactPickerOpen}
+        onClose={() => setIsContactPickerOpen(false)}
+        onSelectContact={(c) => {
+          if (c.name) setPersonName(c.name);
+          if (c.phone) setPhone(c.phone);
+          if (c.avatar) setProfilePhoto(c.avatar);
+        }}
+      />
     </div>
   );
 };
