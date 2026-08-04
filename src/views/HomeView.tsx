@@ -8,6 +8,8 @@ import {
   ArrowDownLeft,
   Banknote,
   PiggyBank,
+  Coins,
+  Wallet,
   TrendingUp,
   AlertTriangle,
   Plus,
@@ -153,7 +155,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs mb-1">
             <span className="font-bold">{getTranslation(language, 'savings')}</span>
             <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/70 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
-              <PiggyBank className="w-4 h-4" />
+              <Coins className="w-4 h-4" />
             </div>
           </div>
           <div className="text-xl font-black text-blue-600 dark:text-blue-400 mt-1">

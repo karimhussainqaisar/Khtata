@@ -150,11 +150,11 @@ export function generateCustomerTransactionPDF(record: UdharRecord, profile: Use
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(255, 255, 255);
-  doc.text('DATE', 18, y + 5.5);
-  doc.text('TRANSACTION ID', 55, y + 5.5);
-  doc.text('METHOD', 105, y + 5.5);
-  doc.text('AMOUNT PAID', 150, y + 5.5);
-  doc.text('RUNNING BAL', 192, y + 5.5, { align: 'right' });
+  doc.text('DATE', 16, y + 5.5);
+  doc.text('TRANSACTION ID', 45, y + 5.5);
+  doc.text('METHOD', 95, y + 5.5);
+  doc.text('AMOUNT PAID', 132, y + 5.5);
+  doc.text('RUNNING BAL', 194, y + 5.5, { align: 'right' });
 
   y += 8;
 
@@ -179,20 +179,20 @@ export function generateCustomerTransactionPDF(record: UdharRecord, profile: Use
         doc.rect(14, y, 182, 8, 'F');
       }
 
-      doc.setFontSize(8.5);
+      doc.setFontSize(8);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(darkNavy[0], darkNavy[1], darkNavy[2]);
 
-      doc.text(formatDatePK(p.date), 18, y + 5.5);
-      doc.text(p.transactionId || `PAY-${p.id.slice(0, 6)}`, 55, y + 5.5);
-      doc.text(p.paymentMethod, 105, y + 5.5);
+      doc.text(formatDatePK(p.date), 16, y + 5.5);
+      doc.text((p.transactionId || `PAY-${p.id.slice(0, 6)}`).slice(0, 18), 45, y + 5.5);
+      doc.text(p.paymentMethod.slice(0, 14), 95, y + 5.5);
 
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(emeraldGreen[0], emeraldGreen[1], emeraldGreen[2]);
-      doc.text(formatPKR(p.amount, profile.currency), 150, y + 5.5);
+      doc.text(formatPKR(p.amount, profile.currency), 132, y + 5.5);
 
       doc.setTextColor(darkNavy[0], darkNavy[1], darkNavy[2]);
-      doc.text(formatPKR(Math.max(0, currentBal), profile.currency), 192, y + 5.5, { align: 'right' });
+      doc.text(formatPKR(Math.max(0, currentBal), profile.currency), 194, y + 5.5, { align: 'right' });
 
       y += 8;
     });
@@ -348,12 +348,12 @@ export function generateAllTransactionsPDF(udharRecords: UdharRecord[], profile:
     doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(255, 255, 255);
-    doc.text('DATE', 18, currentY + 5.5);
-    doc.text('PERSON NAME', 44, currentY + 5.5);
-    doc.text('TYPE', 96, currentY + 5.5);
-    doc.text('TOTAL (PKR)', 122, currentY + 5.5);
-    doc.text('PAID (PKR)', 154, currentY + 5.5);
-    doc.text('REMAINING', 192, currentY + 5.5, { align: 'right' });
+    doc.text('DATE', 16, currentY + 5.5);
+    doc.text('PERSON NAME', 40, currentY + 5.5);
+    doc.text('TYPE', 85, currentY + 5.5);
+    doc.text('TOTAL (PKR)', 114, currentY + 5.5);
+    doc.text('PAID (PKR)', 140, currentY + 5.5);
+    doc.text('REMAINING', 194, currentY + 5.5, { align: 'right' });
   };
 
   drawTableHeader(y);
@@ -399,28 +399,28 @@ export function generateAllTransactionsPDF(udharRecords: UdharRecord[], profile:
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(darkNavy[0], darkNavy[1], darkNavy[2]);
 
-      doc.text(formatDatePK(r.date), 18, y + 5.5);
-      doc.text(r.personName.slice(0, 24), 44, y + 5.5);
+      doc.text(formatDatePK(r.date), 16, y + 5.5);
+      doc.text(r.personName.slice(0, 22), 40, y + 5.5);
 
       doc.setFont('helvetica', 'bold');
       if (isGiven) {
         doc.setTextColor(primaryBlue[0], primaryBlue[1], primaryBlue[2]);
-        doc.text('Given (Lend)', 96, y + 5.5);
+        doc.text('Given (Lend)', 85, y + 5.5);
       } else {
         doc.setTextColor(roseRed[0], roseRed[1], roseRed[2]);
-        doc.text('Taken (Borrow)', 96, y + 5.5);
+        doc.text('Taken (Borrow)', 85, y + 5.5);
       }
 
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(darkNavy[0], darkNavy[1], darkNavy[2]);
-      doc.text(formatPKR(r.amount, profile.currency), 122, y + 5.5);
+      doc.text(formatPKR(r.amount, profile.currency), 114, y + 5.5);
 
       doc.setTextColor(emeraldGreen[0], emeraldGreen[1], emeraldGreen[2]);
-      doc.text(formatPKR(r.paidAmount, profile.currency), 154, y + 5.5);
+      doc.text(formatPKR(r.paidAmount, profile.currency), 140, y + 5.5);
 
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(remaining === 0 ? emeraldGreen[0] : roseRed[0], remaining === 0 ? emeraldGreen[1] : roseRed[1], remaining === 0 ? emeraldGreen[2] : roseRed[2]);
-      doc.text(formatPKR(remaining, profile.currency), 192, y + 5.5, { align: 'right' });
+      doc.text(formatPKR(remaining, profile.currency), 194, y + 5.5, { align: 'right' });
 
       y += 8;
     });
@@ -555,12 +555,12 @@ export function generateAllExpensesPDF(expenses: Expense[], profile: UserProfile
     doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(255, 255, 255);
-    doc.text('DATE', 18, currentY + 5.5);
-    doc.text('TITLE / DESCRIPTION', 46, currentY + 5.5);
-    doc.text('CATEGORY', 105, currentY + 5.5);
-    doc.text('TYPE', 142, currentY + 5.5);
-    doc.text('METHOD', 165, currentY + 5.5);
-    doc.text('AMOUNT', 192, currentY + 5.5, { align: 'right' });
+    doc.text('DATE', 16, currentY + 5.5);
+    doc.text('TITLE / DESCRIPTION', 38, currentY + 5.5);
+    doc.text('CATEGORY', 82, currentY + 5.5);
+    doc.text('TYPE', 110, currentY + 5.5);
+    doc.text('METHOD', 132, currentY + 5.5);
+    doc.text('AMOUNT', 194, currentY + 5.5, { align: 'right' });
   };
 
   drawTableHeader(y);
@@ -603,26 +603,26 @@ export function generateAllExpensesPDF(expenses: Expense[], profile: UserProfile
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(darkNavy[0], darkNavy[1], darkNavy[2]);
 
-      doc.text(formatDatePK(e.date), 18, y + 5.5);
-      doc.text(e.title.slice(0, 26), 46, y + 5.5);
-      doc.text(e.category.slice(0, 18), 105, y + 5.5);
+      doc.text(formatDatePK(e.date), 16, y + 5.5);
+      doc.text(e.title.slice(0, 20), 38, y + 5.5);
+      doc.text(e.category.slice(0, 13), 82, y + 5.5);
 
       doc.setFont('helvetica', 'bold');
       if (e.type === 'expense') {
         doc.setTextColor(roseRed[0], roseRed[1], roseRed[2]);
-        doc.text('Expense', 142, y + 5.5);
+        doc.text('Expense', 110, y + 5.5);
       } else {
         doc.setTextColor(emeraldGreen[0], emeraldGreen[1], emeraldGreen[2]);
-        doc.text('Income', 142, y + 5.5);
+        doc.text('Income', 110, y + 5.5);
       }
 
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(darkNavy[0], darkNavy[1], darkNavy[2]);
-      doc.text(e.paymentMethod, 165, y + 5.5);
+      doc.text(e.paymentMethod.slice(0, 12), 132, y + 5.5);
 
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(e.type === 'expense' ? roseRed[0] : emeraldGreen[0], e.type === 'expense' ? roseRed[1] : emeraldGreen[1], e.type === 'expense' ? roseRed[2] : emeraldGreen[2]);
-      doc.text(`${e.type === 'expense' ? '-' : '+'} ${formatPKR(e.amount, profile.currency)}`, 192, y + 5.5, { align: 'right' });
+      doc.text(`${e.type === 'expense' ? '-' : '+'} ${formatPKR(e.amount, profile.currency)}`, 194, y + 5.5, { align: 'right' });
 
       y += 8;
     });
