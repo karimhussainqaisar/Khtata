@@ -1,0 +1,6 @@
+{
+  "name": "KhataPro – Udhar, Khata & Expense Manager",
+  "description": "Smart Pakistani Khata & Expense Manager with WhatsApp Reminders, Udhar Tracking, Reports, and Khata AI Assistant.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
