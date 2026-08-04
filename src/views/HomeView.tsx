@@ -297,9 +297,15 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     </button>
                     <button
                       onClick={() => onOpenRecordPayment(record)}
-                      className="px-2 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold"
+                      className={`px-2 py-1 rounded-lg text-white text-[11px] font-bold transition-all active:scale-95 ${
+                        record.type === 'given'
+                          ? 'bg-emerald-600 hover:bg-emerald-700'
+                          : 'bg-rose-600 hover:bg-rose-700'
+                      }`}
                     >
-                      Pay
+                      {record.type === 'given'
+                        ? getTranslation(language, 'receivePayment')
+                        : getTranslation(language, 'givePayment')}
                     </button>
                   </div>
                 </div>

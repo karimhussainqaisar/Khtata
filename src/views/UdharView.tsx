@@ -329,9 +329,15 @@ export const UdharView: React.FC<UdharViewProps> = ({
                       {remaining > 0 && (
                         <button
                           onClick={() => onOpenRecordPayment(record)}
-                          className="px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm"
+                          className={`px-2.5 py-1 rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95 ${
+                            record.type === 'given'
+                              ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
+                              : 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-600/20'
+                          }`}
                         >
-                          Receive Payment
+                          {record.type === 'given'
+                            ? getTranslation(language, 'receivePayment')
+                            : getTranslation(language, 'givePayment')}
                         </button>
                       )}
 
